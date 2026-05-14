@@ -1,4 +1,4 @@
-import { AuthError, MalformedSourceResponse, TransportError } from "@cerebro/core";
+import { AuthError, MalformedSourceResponse, newTraceId, TransportError } from "@cerebro/core";
 import { Context, Effect, Layer, Schema } from "effect";
 
 import type {
@@ -136,9 +136,15 @@ const makeClient = (config: FastmailJmapConfig): Effect.Effect<FastmailJmapClien
         const [name, payload, id] = triple;
         if (name === method && id === callId) return Effect.succeed(payload);
         if (name === "error" && id === callId) {
+          // The raw payload can contain Fastmail account IDs or other
+          // internals we don't want crossing the network boundary via
+          // sync_runs.error_message. Log it server-side keyed by a trace
+          // ID; surface only the trace ID in the error detail.
+          const traceId = newTraceId();
+          console.error(`[trace=${traceId}] JMAP error for ${method}:`, payload);
           return new MalformedSourceResponse({
             source: SOURCE,
-            detail: `JMAP returned error for ${method}: ${JSON.stringify(payload)}`,
+            detail: `JMAP returned error for ${method} (trace=${traceId})`,
           });
         }
       }

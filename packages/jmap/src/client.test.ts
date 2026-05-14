@@ -1,5 +1,5 @@
 import { Effect, Exit } from "effect";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FastmailJmap, FastmailJmapLive } from "./client";
 
@@ -183,20 +183,43 @@ describe("FastmailJmapLive — emailQuery + emailGet", () => {
     if (Exit.isSuccess(exit)) expect(exit.value).toHaveLength(2);
   });
 
-  it("maps JMAP error response (status 200 with 'error' method response) to MalformedSourceResponse", async () => {
-    const fetchFn = fetchOk({
-      "https://api.fastmail.com/jmap/session": json(200, sessionBody),
-      "https://api.fastmail.com/jmap/api/": json(200, {
-        sessionState: "s1",
-        methodResponses: [["error", { type: "anchorNotFound" }, "c0"]],
-      }),
+  describe("JMAP error response", () => {
+    let errorSpy: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+      errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     });
-    const program = Effect.gen(function* () {
-      const client = yield* FastmailJmap;
-      return yield* client.emailQuery({});
+    afterEach(() => {
+      errorSpy.mockRestore();
     });
-    const exit = await runClient(program, fetchFn);
-    expect(Exit.isFailure(exit)).toBe(true);
+
+    it("maps a status-200 'error' method response to MalformedSourceResponse, redacting the payload", async () => {
+      const fetchFn = fetchOk({
+        "https://api.fastmail.com/jmap/session": json(200, sessionBody),
+        "https://api.fastmail.com/jmap/api/": json(200, {
+          sessionState: "s1",
+          methodResponses: [["error", { type: "anchorNotFound", accountId: "u-secret-1" }, "c0"]],
+        }),
+      });
+      const program = Effect.gen(function* () {
+        const client = yield* FastmailJmap;
+        return yield* client.emailQuery({});
+      });
+      const exit = await runClient(program, fetchFn);
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (Exit.isFailure(exit)) {
+        const detail = JSON.stringify(exit.cause);
+        // The raw payload must not appear in the typed error.
+        expect(detail).not.toContain("anchorNotFound");
+        expect(detail).not.toContain("u-secret-1");
+        // The trace ID surface should be present so logs can be correlated.
+        expect(detail).toMatch(/trace=[0-9a-f]{8}/);
+        // The full payload must have been logged server-side.
+        expect(errorSpy).toHaveBeenCalledTimes(1);
+        const [logMessage, loggedPayload] = errorSpy.mock.calls[0] ?? [];
+        expect(String(logMessage)).toMatch(/^\[trace=[0-9a-f]{8}\] JMAP error for Email\/query:/);
+        expect(loggedPayload).toEqual({ type: "anchorNotFound", accountId: "u-secret-1" });
+      }
+    });
   });
 
   it("maps a network throw to TransportError", async () => {
