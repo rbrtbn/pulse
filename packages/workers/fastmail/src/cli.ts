@@ -12,7 +12,7 @@
  * - 2  Unexpected error before Sync Run could be recorded (rare)
  */
 import { FastmailJmapLive } from "@cerebro/jmap";
-import { runMigrations, StoreDb, StoreDbLive, STORE_PATH } from "@cerebro/store";
+import { openMigratedDb, StoreDb, STORE_PATH } from "@cerebro/store";
 import { Effect, Layer } from "effect";
 
 import { runSyncRun } from "./worker";
@@ -28,15 +28,11 @@ const main = async (): Promise<void> => {
     process.exit(2);
   }
 
-  // Apply pending migrations against the file-backed Store before the Worker
-  // runs. Idempotent on subsequent invocations.
-  const storeLayer = Layer.effectDiscard(
-    Effect.gen(function* () {
-      const db = yield* StoreDb;
-      runMigrations(db, new URL("../../../store/migrations", import.meta.url).pathname);
-    }),
-  ).pipe(Layer.provideMerge(StoreDbLive));
-
+  // openMigratedDb opens the file at STORE_PATH, applies pending migrations
+  // (idempotent), and returns the Db. The path resolves via import.meta.url
+  // inside @cerebro/store so it lands at the repo-root `data/cerebro.db`
+  // regardless of pnpm's per-package cwd.
+  const storeLayer = Layer.sync(StoreDb, () => openMigratedDb());
   const jmapLayer = FastmailJmapLive({ token });
 
   const result = await Effect.runPromise(
