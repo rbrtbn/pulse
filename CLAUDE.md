@@ -233,6 +233,40 @@ cerebro/
   `@praha/byethrow` Result<T, E> over throw/catch where applicable — but in
   Cerebro, Effect is the canonical mechanism.)
 
+### Effect error discipline
+
+The earlier `tryDb` bug — a helper typed `Effect<X, never, R>` that could
+in fact throw — exposed a class of mistake that's invisible to `Effect.gen`
+and to the type checker. Plain sync throws inside `Effect.gen` become
+**defects** (`Cause.Die`), bypassing the typed error channel. To prevent it:
+
+1. **Effect helpers must use `Effect.try` / `Effect.tryPromise` by
+   construction.** Never write a wrapper that calls a plain thunk and
+   `return`s its result inside `Effect.gen` — the throws escape as
+   defects. If you find yourself writing `Effect<X, never, R>` for a
+   helper that touches I/O (DB, network, filesystem, subprocess, parsing),
+   stop: rewrite it around `Effect.try` so the error channel is honest.
+
+2. **Tests run via `runTest` / `runTestExit` from `@cerebro/core/testing`,
+   not `Effect.runPromise` directly.** Those helpers trap defects as loud
+   "Unexpected defect: …" failures, so any unwrapped throw in production
+   code makes the relevant test fail with a clear signal instead of
+   silently masquerading as a typed failure.
+
+3. **TDD habit: every Effect ↔ non-Effect seam gets a throw-test.** When
+   you write a helper that wraps a non-Effect computation (sync thunk,
+   Promise, callback, third-party call), the *first* test alongside it
+   injects a thrown value and asserts the typed error reaches the Effect
+   channel. Don't declare `E` in a signature until you have a test that
+   proves an error of that shape can actually arrive there.
+
+4. **`Effect<X, never, R>` in non-pure code is a code smell.** Legitimate
+   `never` lives on pure transformations and pre-validated values; any
+   function touching I/O has some failure mode. If you keep `never`,
+   leave a one-line comment explaining why no failure can escape (e.g.
+   "pure: caller already validated"). Reviewers should challenge `never`
+   on sight in I/O paths.
+
 ### When to STOP and ask
 
 - After CONTEXT.md is created — Rob reviews before PRD.

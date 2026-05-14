@@ -1,3 +1,4 @@
+import { runTestExit } from "@cerebro/core/testing";
 import { Effect, Exit } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -33,9 +34,7 @@ const runClient = <A, E>(
   effect: Effect.Effect<A, E, FastmailJmap>,
   fetchFn: typeof globalThis.fetch,
 ) =>
-  Effect.runPromiseExit(
-    effect.pipe(Effect.provide(FastmailJmapLive({ token: "secret", fetch: fetchFn }))),
-  );
+  runTestExit(effect.pipe(Effect.provide(FastmailJmapLive({ token: "secret", fetch: fetchFn }))));
 
 describe("FastmailJmapLive — session discovery", () => {
   it("resolves accountId from primaryAccounts on a healthy session", async () => {

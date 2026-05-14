@@ -8,6 +8,7 @@ import {
   StoreError,
   TransportError,
 } from "./errors";
+import { runTest } from "./testing";
 
 describe("tagged errors", () => {
   it("MalformedSourceResponse carries _tag and fields", () => {
@@ -48,7 +49,7 @@ describe("tagged errors", () => {
       yield* new TransportError({ source: "fastmail", detail: "boom" });
       return "unreached";
     }).pipe(Effect.catchTag("TransportError", (e) => Effect.succeed(`recovered from ${e._tag}`)));
-    const result = await Effect.runPromise(program);
+    const result = await runTest(program);
     expect(result).toBe("recovered from TransportError");
   });
 
