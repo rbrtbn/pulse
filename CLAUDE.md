@@ -223,7 +223,11 @@ cerebro/
   `Effect.tryPromise` and `Data.TaggedError`. No raw Promises in domain code.
 - **No `any`.** No non-null assertions (`!`). No disabling strict mode.
 - **Schema validation at every boundary** — incoming MCP responses, Worker
-  inputs, route loaders. Zod or Effect Schema, consistent within a package.
+  inputs, route loaders. **Effect Schema is the canonical choice** in this
+  repo; do not introduce Zod. Effect Schema composes natively with
+  `Effect.gen` / `Effect.tryPromise` and produces typed errors
+  (`MalformedSourceResponse`) that flow through the same `catchTag`
+  surface as the rest of the domain.
 - **Comments explain why, not what.** If the code needs a comment to explain
   what it does, the code is wrong. (Rob's global preference: prefer
   `@praha/byethrow` Result<T, E> over throw/catch where applicable — but in
