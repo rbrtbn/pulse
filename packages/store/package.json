@@ -11,13 +11,13 @@
   },
   "dependencies": {
     "@cerebro/core": "workspace:*",
-    "better-sqlite3": "^11.5.0",
-    "drizzle-orm": "^0.36.0",
-    "effect": "^3.18.6"
+    "better-sqlite3": "catalog:",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.11",
-    "drizzle-kit": "^0.30.0",
+    "@types/better-sqlite3": "catalog:",
+    "drizzle-kit": "catalog:",
     "vitest": "catalog:"
   }
 }
