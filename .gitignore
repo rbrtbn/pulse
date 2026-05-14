@@ -51,3 +51,4 @@ coverage/
 # Caches
 .cache/
 .turbo/
+apps/web/src/routeTree.gen.ts

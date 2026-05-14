@@ -64,6 +64,23 @@ export const runMigrations = (db: Db, migrationsFolder: string): void => {
   migrate(db, { migrationsFolder });
 };
 
+/**
+ * Absolute path to this package's migrations folder. Consumers (CLI, Web
+ * Interface) use this so they don't have to know the package layout.
+ */
+export const MIGRATIONS_PATH = new URL("../migrations", import.meta.url).pathname;
+
+/**
+ * One-call helper: open the Store, apply pending migrations, return the
+ * ready-to-use Db. Both the CLI's startup and the Web Interface's
+ * lazy-initialised singleton call this.
+ */
+export const openMigratedDb = (path: string = STORE_PATH): Db => {
+  const db = openDb(path);
+  runMigrations(db, MIGRATIONS_PATH);
+  return db;
+};
+
 /** Effect Layer providing a file-backed Db at STORE_PATH. */
 export const StoreDbLive = Layer.sync(StoreDb, () => openDb());
 
