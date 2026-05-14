@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Run cerebro's dev server with secrets injected per-process from Keychain.
+# Secrets stay inside this script's child; the shell (and any coding agent
+# running there) never sees them.
+#
+# Prereqs: 1P items `cerebro/<VAR>` tagged `keychain-sync`, then `ks`
+# to populate Keychain. KEYRING_PROJECT comes from .envrc.
+set -euo pipefail
+
+exec keyring exec \
+  ANTHROPIC_API_KEY \
+  -- pnpm vp dev "$@"
