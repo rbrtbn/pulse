@@ -103,9 +103,12 @@ two disagree, CONTEXT.md is the more recent source — update this glossary.
 - **Data integration:** official **MCP TypeScript SDK** as a client, with
   typed Effect wrappers in `packages/mcp`.
 - **Secrets:** macOS **Keychain** via `keyring exec` (entry point:
-  `bin/dev` and friends), populated from 1Password by `keyring sync`
-  (alias `ks`). Items live in 1Password under titles like
-  `cerebro/ANTHROPIC_API_KEY`, tag `keychain-sync`. Never plain `.env`
+  `bin/dev` and friends), populated from 1Password by `keyring sync`.
+  Always write the canonical form `keyring sync` in docs and scripts —
+  the `ks` shorthand is an interactive-zsh alias and won't be present
+  in non-interactive shells, scripts, or fresh sessions. Items live in
+  1Password under titles like `cerebro/ANTHROPIC_API_KEY`, tag
+  `keychain-sync`. Never plain `.env`
   files committed; `.env.example` is the only env file in git. **Don't
   use `op run` here** — it's slow and exports secrets into the shell
   env where coding agents would see them.
