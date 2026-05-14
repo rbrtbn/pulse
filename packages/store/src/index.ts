@@ -1,4 +1,14 @@
-export { openDb, runMigrations, STORE_PATH, StoreDb, StoreDbLive, StoreDbTest, tryDb } from "./db";
+export {
+  MIGRATIONS_PATH,
+  openDb,
+  openMigratedDb,
+  runMigrations,
+  STORE_PATH,
+  StoreDb,
+  StoreDbLive,
+  StoreDbTest,
+  tryDb,
+} from "./db";
 export type { Db } from "./db";
 export {
   deleteEmailsByIds,
