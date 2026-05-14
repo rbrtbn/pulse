@@ -35,9 +35,11 @@ export class AuthError extends Data.TaggedError("AuthError")<{
 /**
  * The Store rejected a read or write — e.g., a transaction conflict, a
  * constraint violation, a corrupt file. Indicates Cerebro-internal damage,
- * not a Source problem.
+ * not a Source problem. `op` names the query that failed so logs can
+ * attribute the failure without a stack trace.
  */
 export class StoreError extends Data.TaggedError("StoreError")<{
+  op: string;
   detail: string;
 }> {}
 

@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { StoreError } from "@cerebro/core";
 import Database from "better-sqlite3";
 import { Context, Effect, Layer } from "effect";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -98,11 +99,23 @@ export const StoreDbTest = (migrationsFolder: string): Layer.Layer<StoreDb> =>
 
 /**
  * Convenience runner used inside the Effect-returning query functions.
- * Wraps a synchronous Drizzle call so failures map to StoreError via the
- * caller's catchTag rather than throwing uncaught.
+ * Wraps a synchronous Drizzle call so any throw (constraint violation, locked
+ * DB, disk full, malformed SQL, …) maps to `StoreError` via `Effect.try`
+ * rather than escaping as an Effect defect — defects are uncatchable via
+ * `catchTag`, which is why the previous `never` error channel was wrong.
+ *
+ * `op` names the query and surfaces in the resulting `StoreError.op` so logs
+ * can attribute a failure without a stack trace.
  */
-export const tryDb = <A>(thunk: (db: Db) => A): Effect.Effect<A, never, StoreDb> =>
+export const tryDb = <A>(op: string, thunk: (db: Db) => A): Effect.Effect<A, StoreError, StoreDb> =>
   Effect.gen(function* () {
     const db = yield* StoreDb;
-    return thunk(db);
+    return yield* Effect.try({
+      try: () => thunk(db),
+      catch: (cause) =>
+        new StoreError({
+          op,
+          detail: cause instanceof Error ? cause.message : String(cause),
+        }),
+    });
   });

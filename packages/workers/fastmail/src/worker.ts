@@ -1,4 +1,9 @@
-import { type EmailRow, MalformedSourceResponse, type SyncRun } from "@cerebro/core";
+import {
+  type EmailRow,
+  MalformedSourceResponse,
+  type StoreError,
+  type SyncRun,
+} from "@cerebro/core";
 import { FastmailJmap } from "@cerebro/jmap";
 import { recordSyncRun, setSyncCursor, StoreDb, upsertEmails } from "@cerebro/store";
 import { Effect } from "effect";
@@ -24,9 +29,12 @@ const EMAIL_PROPERTIES = [
 ];
 
 /**
- * One Sync Run. Returns the recorded SyncRun on every path — success or
- * failure — so the caller can decide whether to surface the outcome to
- * the user (CLI exit code, server function response).
+ * One Sync Run. Returns the recorded SyncRun on every path where the Store
+ * was reachable — Source-side errors are caught and recorded as a failed
+ * row. The residual `StoreError` channel covers the rare case where the
+ * Store itself is unreachable (corrupt file, disk full, locked DB): there is
+ * no useful row to write, so the caller — the CLI's exit-code-2 path, or
+ * the web loader's error boundary — surfaces it directly.
  *
  * **M1.1 ships the Bootstrap path only.** The cursor returned from this
  * run becomes the starting point for M1.2's Incremental path. M1.1 always
@@ -34,21 +42,27 @@ const EMAIL_PROPERTIES = [
  * 30-day window is idempotent under upsert, and the Incremental short
  * circuit lands in M1.2.
  */
-export const runSyncRun = (): Effect.Effect<SyncRun, never, FastmailJmap | StoreDb> =>
+export const runSyncRun = (): Effect.Effect<SyncRun, StoreError, FastmailJmap | StoreDb> =>
   Effect.gen(function* () {
     const startedAt = new Date();
     return yield* runBootstrap(startedAt).pipe(
-      Effect.catchAll((err) =>
-        recordSyncRun({
-          workerName: WORKER_NAME,
-          startedAt,
-          endedAt: new Date(),
-          status: "failed",
-          errorTag: err._tag,
-          errorMessage: errorDetail(err),
-        }),
-      ),
+      Effect.catchTags({
+        AuthError: (err) => recordFailure(startedAt, err),
+        TransportError: (err) => recordFailure(startedAt, err),
+        MalformedSourceResponse: (err) => recordFailure(startedAt, err),
+        StoreError: (err) => Effect.fail(err),
+      }),
     );
+  });
+
+const recordFailure = (startedAt: Date, err: { readonly _tag: string }) =>
+  recordSyncRun({
+    workerName: WORKER_NAME,
+    startedAt,
+    endedAt: new Date(),
+    status: "failed",
+    errorTag: err._tag,
+    errorMessage: errorDetail(err),
   });
 
 const runBootstrap = (startedAt: Date) =>
