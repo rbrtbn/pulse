@@ -1,7 +1,7 @@
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import viteReact from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { createRunnableDevEnvironment, defineConfig } from "vite";
 
 /**
  * App-local Vite config. The root `vite.config.ts` handles lint / format /
@@ -12,6 +12,16 @@ import { defineConfig } from "vite";
 export default defineConfig({
   server: {
     port: 3000,
+  },
+  resolve: {
+    tsconfigPaths: true,
+  },
+  environments: {
+    ssr: {
+      dev: {
+        createEnvironment: (name, config) => createRunnableDevEnvironment(name, config),
+      },
+    },
   },
   plugins: [tailwindcss(), tanstackStart(), viteReact()],
 });
