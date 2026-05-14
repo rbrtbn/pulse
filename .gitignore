@@ -13,7 +13,8 @@ build/
 # TypeScript
 *.tsbuildinfo
 
-# SQLite (Store lives locally, never committed)
+# SQLite Store (lives locally, never committed) — STORE_PATH = ./data/cerebro.db
+data/
 *.db
 *.db-shm
 *.db-wal
@@ -25,7 +26,7 @@ build/
 npm-debug.log*
 pnpm-debug.log*
 
-# Env / secrets — managed via 1Password `op run`, never committed
+# Env / secrets — managed via `keyring exec` (Keychain populated from 1Password by `ks`); never committed
 .env
 .env.*
 !.env.example
