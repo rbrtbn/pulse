@@ -102,10 +102,26 @@ two disagree, CONTEXT.md is the more recent source — update this glossary.
   NOT Mastra. NOT LangChain. NOT OpenClaw as a foundation.**
 - **Data integration:** official **MCP TypeScript SDK** as a client, with
   typed Effect wrappers in `packages/mcp`.
-- **Secrets:** **1Password via `op run`**. Never plain `.env` files
-  committed. `.env.example` is the only env file in git.
+- **Secrets:** macOS **Keychain** via `keyring exec` (entry point:
+  `bin/dev` and friends), populated from 1Password by `keyring sync`
+  (alias `ks`). Items live in 1Password under titles like
+  `cerebro/ANTHROPIC_API_KEY`, tag `keychain-sync`. Never plain `.env`
+  files committed; `.env.example` is the only env file in git. **Don't
+  use `op run` here** — it's slow and exports secrets into the shell
+  env where coding agents would see them.
 - **Shell scripts:** `#!/usr/bin/env bash`, `set -euo pipefail`, `brew` not
   `apt` (macOS).
+
+### Runtime environment
+
+Cerebro runs on Rob's home server ("loft"). When a task needs details about
+that host (services running, model server endpoints, Keychain item names,
+filesystem layout, what's auto-deployed via chezmoi), check the dotfiles
+repo at **`~/code/dotfiles/docs/hosts/loft.md`** if available — it is the
+source of truth. Cerebro does **not** duplicate that material here, because
+this repo is public and loft's topology lives in a private repo.
+
+Decisions about how cerebro *uses* that environment live in `docs/adr/`.
 
 ### Things to verify rather than assume
 
