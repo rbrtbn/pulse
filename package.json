@@ -1,0 +1,20 @@
+{
+  "name": "cerebro",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "vp check",
+    "test": "vp test",
+    "dev": "vp run web#dev",
+    "build": "vp run -r build",
+    "sync:fastmail": "vp run workers-fastmail#sync"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite-plus": "catalog:"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.30.1"
+}
