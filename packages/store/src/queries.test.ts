@@ -235,8 +235,6 @@ describe("recordSyncRun + latestSyncRun + latestSyncRunAttempt", () => {
         startedAt: new Date("2026-05-14T10:00:00Z"),
         endedAt: new Date("2026-05-14T10:00:05Z"),
         status: "succeeded",
-        errorTag: null,
-        errorMessage: null,
       });
       yield* recordSyncRun({
         workerName: "fastmail",
@@ -261,8 +259,6 @@ describe("recordSyncRun + latestSyncRun + latestSyncRunAttempt", () => {
         startedAt: new Date("2026-05-14T10:00:00Z"),
         endedAt: new Date("2026-05-14T10:00:05Z"),
         status: "succeeded",
-        errorTag: null,
-        errorMessage: null,
       });
       yield* recordSyncRun({
         workerName: "fastmail",
@@ -279,7 +275,7 @@ describe("recordSyncRun + latestSyncRun + latestSyncRunAttempt", () => {
     expect(result?.errorTag).toBe("TransportError");
   });
 
-  it("succeeded row carries audit errorTag (catchup recovery per ADR 0004)", async () => {
+  it("succeeded row carries an audit annotation (catchup recovery per ADR 0004)", async () => {
     const layer = testLayer();
     const program = Effect.gen(function* () {
       yield* recordSyncRun({
@@ -287,13 +283,14 @@ describe("recordSyncRun + latestSyncRun + latestSyncRunAttempt", () => {
         startedAt: new Date("2026-05-14T10:00:00Z"),
         endedAt: new Date("2026-05-14T10:00:05Z"),
         status: "succeeded",
-        errorTag: "recovered_via_catchup",
-        errorMessage: null,
+        annotation: "recovered_via_catchup",
       });
       return yield* latestSyncRun("fastmail");
     });
     const result = await run(program.pipe(Effect.provide(layer)));
     expect(result?.status).toBe("succeeded");
+    // Annotation lands in error_tag column for backward compatibility with
+    // the binary status schema (ADR 0004).
     expect(result?.errorTag).toBe("recovered_via_catchup");
   });
 });

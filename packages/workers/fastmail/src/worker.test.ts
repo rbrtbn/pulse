@@ -13,7 +13,8 @@ import {
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { runSyncRun, WORKER_NAME } from "./worker";
+import type { Strategy } from "./strategy";
+import { runSyncRun, runWithEnvelope, WORKER_NAME } from "./worker";
 
 const migrationsFolder = resolve(import.meta.dirname, "..", "..", "..", "store", "migrations");
 
@@ -145,5 +146,54 @@ describe("runSyncRun — failure paths", () => {
     expect(result?.status).toBe("failed");
     expect(result?.errorTag).toBe("TransportError");
     expect(result?.errorMessage).toBe("ETIMEDOUT");
+  });
+});
+
+describe("runWithEnvelope — independent of any concrete strategy", () => {
+  it("upserts rows, advances cursor, records succeeded — for a trivial strategy", async () => {
+    const strategy: Strategy = Effect.succeed({
+      rows: [],
+      cursorToken: "qs-envelope",
+    });
+    const startedAt = new Date("2026-05-14T10:00:00Z");
+    const program = Effect.gen(function* () {
+      const run = yield* runWithEnvelope(startedAt, strategy);
+      const cursor = yield* getSyncCursor(WORKER_NAME);
+      return { run, cursor };
+    });
+    const result = await runTest(program.pipe(Effect.provide(layers(FastmailJmapStub({})))));
+    expect(result.run.status).toBe("succeeded");
+    expect(result.run.errorTag).toBeNull();
+    expect(result.run.startedAt.toISOString()).toBe(startedAt.toISOString());
+    expect(result.cursor?.stateToken).toBe("qs-envelope");
+  });
+
+  it("annotates the succeeded row when the strategy supplies one (ADR 0004 audit)", async () => {
+    const strategy: Strategy = Effect.succeed({
+      rows: [],
+      cursorToken: "qs-recovered",
+      annotation: "recovered_via_catchup",
+    });
+    const result = await runTest(
+      runWithEnvelope(new Date(), strategy).pipe(Effect.provide(layers(FastmailJmapStub({})))),
+    );
+    expect(result.status).toBe("succeeded");
+    expect(result.errorTag).toBe("recovered_via_catchup");
+  });
+
+  it("routes every StrategyError tag into a failed SyncRun row — cursor untouched", async () => {
+    const strategy: Strategy = Effect.fail(
+      new TransportError({ source: "fastmail", detail: "ECONNRESET" }),
+    );
+    const program = Effect.gen(function* () {
+      const run = yield* runWithEnvelope(new Date(), strategy);
+      const cursor = yield* getSyncCursor(WORKER_NAME);
+      return { run, cursor };
+    });
+    const result = await runTest(program.pipe(Effect.provide(layers(FastmailJmapStub({})))));
+    expect(result.run.status).toBe("failed");
+    expect(result.run.errorTag).toBe("TransportError");
+    expect(result.run.errorMessage).toBe("ECONNRESET");
+    expect(result.cursor).toBeNull();
   });
 });
