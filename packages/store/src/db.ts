@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import Database from "better-sqlite3";
 import { Context, Effect, Layer } from "effect";
@@ -13,10 +14,18 @@ import * as schema from "./schema";
  * dev server, and any future task all import from here so the file path
  * has exactly one source of truth.
  *
+ * Anchored to this file's location so it resolves to `<repo>/data/cerebro.db`
+ * regardless of which workspace package the caller was launched from — pnpm
+ * cd's into the filtered package before running its script, so
+ * `process.cwd()` would otherwise point at e.g. `packages/workers/fastmail`.
+ *
  * Override via the constructor argument to `openDb` (used by tests passing
  * `:memory:` and by anyone running multiple instances side-by-side).
  */
-export const STORE_PATH = resolve(process.cwd(), "data/cerebro.db");
+export const STORE_PATH = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../data/cerebro.db",
+);
 
 export type Db = BetterSQLite3Database<typeof schema>;
 
