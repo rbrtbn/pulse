@@ -33,7 +33,7 @@ const main = async (): Promise<void> => {
   const storeLayer = Layer.effectDiscard(
     Effect.gen(function* () {
       const db = yield* StoreDb;
-      runMigrations(db, new URL("../../store/migrations", import.meta.url).pathname);
+      runMigrations(db, new URL("../../../store/migrations", import.meta.url).pathname);
     }),
   ).pipe(Layer.provideMerge(StoreDbLive));
 
