@@ -40,6 +40,6 @@ _To be filled in as the project develops._
 
 ```bash
 # pnpm i
-# ks         # keyring sync — populate Keychain from 1Password (cerebro/* items)
-# bin/dev    # runs `pnpm vp dev` with secrets injected per-process
+# keyring sync   # populate Keychain from 1Password (cerebro/* items). Aliased to `ks` in Rob's interactive zsh.
+# bin/dev        # runs `pnpm vp dev` with secrets injected per-process
 ```

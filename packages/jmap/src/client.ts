@@ -1,13 +1,18 @@
 import { AuthError, MalformedSourceResponse, newTraceId, TransportError } from "@cerebro/core";
 import { Context, Effect, Layer, Schema } from "effect";
 
-import type {
-  EmailQueryParams,
-  EmailQueryResult,
-  JmapError,
-  JmapMethodCall,
-  JmapResponse,
-  Mailbox,
+import {
+  EmailGetResponseSchema,
+  type EmailQueryParams,
+  type EmailQueryResult,
+  EmailQueryResponseSchema,
+  type JmapError,
+  type JmapMethodCall,
+  type JmapResponse,
+  type Mailbox,
+  MailboxGetResponseSchema,
+  type Session,
+  SessionSchema,
 } from "./types";
 
 const MAIL_CAPABILITY = "urn:ietf:params:jmap:mail";
@@ -51,31 +56,6 @@ export type FastmailJmapConfig = {
 };
 
 const SOURCE = "fastmail";
-
-/** Session shape — only the fields we use. */
-const SessionSchema = Schema.Struct({
-  apiUrl: Schema.String,
-  primaryAccounts: Schema.Record({ key: Schema.String, value: Schema.String }),
-});
-
-const MailboxSchema = Schema.Struct({
-  id: Schema.String,
-  name: Schema.String,
-  role: Schema.NullOr(Schema.String),
-});
-
-const MailboxGetResponseSchema = Schema.Struct({
-  list: Schema.Array(MailboxSchema),
-});
-
-const EmailQueryResponseSchema = Schema.Struct({
-  ids: Schema.Array(Schema.String),
-  queryState: Schema.String,
-});
-
-const EmailGetResponseSchema = Schema.Struct({
-  list: Schema.Array(Schema.Unknown),
-});
 
 /** Build the production Layer for the Fastmail JMAP client. */
 export const FastmailJmapLive = (
@@ -163,7 +143,7 @@ const makeClient = (config: FastmailJmapConfig): Effect.Effect<FastmailJmapClien
           const response = yield* callApi([["Mailbox/get", args, "c0"]]);
           const payload = yield* findResponse(response, "Mailbox/get", "c0");
           const parsed = yield* decodeOrFail(MailboxGetResponseSchema, payload);
-          return parsed.list as ReadonlyArray<Mailbox>;
+          return parsed.list;
         }),
       emailQuery: (params) =>
         Effect.gen(function* () {
@@ -174,11 +154,7 @@ const makeClient = (config: FastmailJmapConfig): Effect.Effect<FastmailJmapClien
           if (params.position !== undefined) args.position = params.position;
           const response = yield* callApi([["Email/query", args, "c0"]]);
           const payload = yield* findResponse(response, "Email/query", "c0");
-          const parsed = yield* decodeOrFail(EmailQueryResponseSchema, payload);
-          return {
-            ids: parsed.ids as ReadonlyArray<string>,
-            queryState: parsed.queryState,
-          };
+          return yield* decodeOrFail(EmailQueryResponseSchema, payload);
         }),
       emailGet: (ids, properties) =>
         Effect.gen(function* () {
@@ -196,7 +172,7 @@ const fetchSession = (
   baseUrl: string,
   token: string,
   fetchFn: typeof globalThis.fetch,
-): Effect.Effect<typeof SessionSchema.Type, JmapError> =>
+): Effect.Effect<Session, JmapError> =>
   Effect.gen(function* () {
     const res = yield* httpFetch(fetchFn, `${baseUrl}/jmap/session`, {
       method: "GET",
