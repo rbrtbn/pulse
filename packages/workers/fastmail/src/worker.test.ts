@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 
 import { AuthError, TransportError } from "@cerebro/core";
+import { runTest } from "@cerebro/core/testing";
 import { FastmailJmap, FastmailJmapStub } from "@cerebro/jmap";
 import {
   getSyncCursor,
@@ -49,7 +50,7 @@ describe("runSyncRun — Bootstrap happy path", () => {
       const threads = yield* upcomingUnreadThreads();
       return { run, cursor, threads };
     });
-    const result = await Effect.runPromise(program.pipe(Effect.provide(layers(jmap))));
+    const result = await runTest(program.pipe(Effect.provide(layers(jmap))));
     expect(result.run.status).toBe("succeeded");
     expect(result.run.errorTag).toBeNull();
     expect(result.cursor?.stateToken).toBe("qs-1");
@@ -67,7 +68,7 @@ describe("runSyncRun — Bootstrap happy path", () => {
       const threads = yield* upcomingUnreadThreads();
       return { run, cursor, threads };
     });
-    const result = await Effect.runPromise(program.pipe(Effect.provide(layers(jmap))));
+    const result = await runTest(program.pipe(Effect.provide(layers(jmap))));
     expect(result.run.status).toBe("succeeded");
     expect(result.cursor?.stateToken).toBe("qs-empty");
     expect(result.threads).toEqual([]);
@@ -82,7 +83,7 @@ describe("runSyncRun — failure paths", () => {
       const threads = yield* upcomingUnreadThreads();
       return { run, threads };
     });
-    const result = await Effect.runPromise(program.pipe(Effect.provide(layers(jmap))));
+    const result = await runTest(program.pipe(Effect.provide(layers(jmap))));
     expect(result.run.status).toBe("failed");
     expect(result.run.errorTag).toBe("MalformedSourceResponse");
     expect(result.threads).toEqual([]);
@@ -99,7 +100,7 @@ describe("runSyncRun — failure paths", () => {
       const threads = yield* upcomingUnreadThreads();
       return { run, cursor, threads };
     });
-    const result = await Effect.runPromise(program.pipe(Effect.provide(layers(jmap))));
+    const result = await runTest(program.pipe(Effect.provide(layers(jmap))));
     expect(result.run.status).toBe("failed");
     expect(result.run.errorTag).toBe("TransportError");
     expect(result.cursor).toBeNull();
@@ -114,7 +115,7 @@ describe("runSyncRun — failure paths", () => {
     const program = Effect.gen(function* () {
       return yield* runSyncRun();
     });
-    const result = await Effect.runPromise(program.pipe(Effect.provide(layers(jmap))));
+    const result = await runTest(program.pipe(Effect.provide(layers(jmap))));
     expect(result.status).toBe("failed");
     expect(result.errorTag).toBe("AuthError");
   });
@@ -126,7 +127,7 @@ describe("runSyncRun — failure paths", () => {
     const program = Effect.gen(function* () {
       return yield* runSyncRun();
     });
-    const result = await Effect.runPromise(program.pipe(Effect.provide(layers(jmap))));
+    const result = await runTest(program.pipe(Effect.provide(layers(jmap))));
     expect(result.status).toBe("failed");
     expect(result.errorTag).toBe("MalformedSourceResponse");
   });
@@ -140,7 +141,7 @@ describe("runSyncRun — failure paths", () => {
       yield* runSyncRun();
       return yield* latestSyncRunAttempt(WORKER_NAME);
     });
-    const result = await Effect.runPromise(program.pipe(Effect.provide(layers(jmap))));
+    const result = await runTest(program.pipe(Effect.provide(layers(jmap))));
     expect(result?.status).toBe("failed");
     expect(result?.errorTag).toBe("TransportError");
     expect(result?.errorMessage).toBe("ETIMEDOUT");

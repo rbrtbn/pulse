@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 
-import type { EmailRow, StoreError } from "@cerebro/core";
+import type { EmailRow } from "@cerebro/core";
+import { runTest } from "@cerebro/core/testing";
 import { Effect } from "effect";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -36,8 +37,7 @@ const sampleEmail = (overrides: Partial<EmailRow> = {}): EmailRow => ({
   ...overrides,
 });
 
-const run = <A>(effect: Effect.Effect<A, StoreError, never>): Promise<A> =>
-  Effect.runPromise(effect);
+const run = runTest;
 
 describe("upcomingUnreadThreads", () => {
   let layer: ReturnType<typeof testLayer>;
@@ -332,7 +332,7 @@ describe("tryDb (StoreError surface)", () => {
     const program = tryDb("test-op", () => {
       throw new Error("simulated DB failure");
     }).pipe(Effect.either, Effect.provide(testLayer()));
-    const result = await Effect.runPromise(program);
+    const result = await runTest(program);
     expect(result._tag).toBe("Left");
     if (result._tag === "Left") {
       expect(result.left._tag).toBe("StoreError");
@@ -345,7 +345,7 @@ describe("tryDb (StoreError surface)", () => {
     const program = tryDb("weird-op", () => {
       throw "not an Error instance";
     }).pipe(Effect.either, Effect.provide(testLayer()));
-    const result = await Effect.runPromise(program);
+    const result = await runTest(program);
     expect(result._tag).toBe("Left");
     if (result._tag === "Left") {
       expect(result.left.detail).toBe("not an Error instance");

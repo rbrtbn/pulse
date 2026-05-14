@@ -1,4 +1,5 @@
-import { Effect, Exit } from "effect";
+import { runTestExit } from "@cerebro/core/testing";
+import { Exit } from "effect";
 import { describe, expect, it } from "vitest";
 
 import { jmapToEmailRow } from "./email-mapping";
@@ -16,7 +17,7 @@ const wellFormed = {
   receivedAt: "2026-05-14T14:00:00Z",
 };
 
-const run = <A, E>(eff: Effect.Effect<A, E>) => Effect.runPromiseExit(eff);
+const run = runTestExit;
 
 describe("jmapToEmailRow", () => {
   it("projects a well-formed JmapEmail into an EmailRow", async () => {
