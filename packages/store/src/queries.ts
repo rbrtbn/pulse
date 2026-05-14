@@ -139,41 +139,50 @@ export const setEmailUnread = (
       .run();
   });
 
-/** Input shape for recording a Sync Run. Worker passes the run's outcome. */
-export type SyncRunInput = {
+/**
+ * Common identity + timing of a Sync Run, present on every recorded row
+ * regardless of outcome.
+ */
+type SyncRunIdentity = {
   workerName: string;
   startedAt: Date;
   endedAt: Date;
-  status: "succeeded" | "failed";
-  errorTag: string | null;
-  errorMessage: string | null;
 };
+
+/**
+ * Input shape for recording a Sync Run. The succeeded/failed split is
+ * encoded in the type so a caller cannot construct a failed row without
+ * its categorisation, or a succeeded row that fakes an errorMessage. The
+ * shape mirrors ADR 0004: the only string a succeeded row carries is an
+ * optional `annotation` (e.g. `recovered_via_catchup`), stored as the
+ * `error_tag` column for backward compatibility with the binary schema.
+ *
+ * Failed rows require both `errorTag` (the categorisation —
+ * `MalformedSourceResponse` / `TransportError` / `AuthError` /
+ * `StoreError`) and `errorMessage` (the human-readable detail).
+ */
+export type SyncRunInput = SyncRunIdentity &
+  (
+    | { status: "succeeded"; annotation?: string }
+    | { status: "failed"; errorTag: string; errorMessage: string }
+  );
 
 /** Insert a Sync Run row and return it with its assigned id. */
 export const recordSyncRun = (input: SyncRunInput): Effect.Effect<SyncRun, StoreError, StoreDb> =>
   tryDb("recordSyncRun", (db) => {
-    const inserted = db
-      .insert(syncRuns)
-      .values({
-        workerName: input.workerName,
-        startedAt: input.startedAt,
-        endedAt: input.endedAt,
-        status: input.status,
-        errorTag: input.errorTag,
-        errorMessage: input.errorMessage,
-      })
-      .returning()
-      .get();
-    return {
-      id: inserted.id,
-      workerName: inserted.workerName,
-      startedAt: inserted.startedAt,
-      endedAt: inserted.endedAt,
-      status: inserted.status as SyncRun["status"],
-      errorTag: inserted.errorTag,
-      errorMessage: inserted.errorMessage,
-    };
+    const columns = toSyncRunColumns(input);
+    const inserted = db.insert(syncRuns).values(columns).returning().get();
+    return toSyncRun(inserted);
   });
+
+const toSyncRunColumns = (input: SyncRunInput) => ({
+  workerName: input.workerName,
+  startedAt: input.startedAt,
+  endedAt: input.endedAt,
+  status: input.status,
+  errorTag: input.status === "succeeded" ? (input.annotation ?? null) : input.errorTag,
+  errorMessage: input.status === "succeeded" ? null : input.errorMessage,
+});
 
 /**
  * Most recent **successful** Sync Run for a given Worker. Drives the
