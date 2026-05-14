@@ -1,10 +1,10 @@
 import { resolve } from "node:path";
 
-import type { EmailRow } from "@cerebro/core";
+import type { EmailRow, StoreError } from "@cerebro/core";
 import { Effect } from "effect";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { StoreDbTest } from "./db";
+import { StoreDbTest, tryDb } from "./db";
 import {
   deleteEmailsByIds,
   getSyncCursor,
@@ -36,7 +36,8 @@ const sampleEmail = (overrides: Partial<EmailRow> = {}): EmailRow => ({
   ...overrides,
 });
 
-const run = <A>(effect: Effect.Effect<A, never, never>): Promise<A> => Effect.runPromise(effect);
+const run = <A>(effect: Effect.Effect<A, StoreError, never>): Promise<A> =>
+  Effect.runPromise(effect);
 
 describe("upcomingUnreadThreads", () => {
   let layer: ReturnType<typeof testLayer>;
@@ -323,5 +324,31 @@ describe("getSyncCursor + setSyncCursor", () => {
     });
     const result = await run(program.pipe(Effect.provide(layer)));
     expect(result?.stateToken).toBe("state-v2");
+  });
+});
+
+describe("tryDb (StoreError surface)", () => {
+  it("wraps a synchronous throw as a StoreError carrying op + detail", async () => {
+    const program = tryDb("test-op", () => {
+      throw new Error("simulated DB failure");
+    }).pipe(Effect.either, Effect.provide(testLayer()));
+    const result = await Effect.runPromise(program);
+    expect(result._tag).toBe("Left");
+    if (result._tag === "Left") {
+      expect(result.left._tag).toBe("StoreError");
+      expect(result.left.op).toBe("test-op");
+      expect(result.left.detail).toBe("simulated DB failure");
+    }
+  });
+
+  it("stringifies non-Error throws into detail", async () => {
+    const program = tryDb("weird-op", () => {
+      throw "not an Error instance";
+    }).pipe(Effect.either, Effect.provide(testLayer()));
+    const result = await Effect.runPromise(program);
+    expect(result._tag).toBe("Left");
+    if (result._tag === "Left") {
+      expect(result.left.detail).toBe("not an Error instance");
+    }
   });
 });

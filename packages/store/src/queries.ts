@@ -1,4 +1,4 @@
-import type { EmailRow, SyncCursor, SyncRun } from "@cerebro/core";
+import type { EmailRow, StoreError, SyncCursor, SyncRun } from "@cerebro/core";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
@@ -37,8 +37,8 @@ export type UnreadThread = {
  * efficiency, but the simpler shape is correct, portable, and trivially
  * testable.
  */
-export const upcomingUnreadThreads = (): Effect.Effect<UnreadThread[], never, StoreDb> =>
-  tryDb((db) => {
+export const upcomingUnreadThreads = (): Effect.Effect<UnreadThread[], StoreError, StoreDb> =>
+  tryDb("upcomingUnreadThreads", (db) => {
     const unreadThreadRows = db
       .selectDistinct({ threadId: emails.threadId })
       .from(emails)
@@ -88,8 +88,10 @@ export const upcomingUnreadThreads = (): Effect.Effect<UnreadThread[], never, St
  * rows the Worker supplies first_seen/last_seen explicitly (typically
  * `new Date()` at Sync Run time).
  */
-export const upsertEmails = (rows: ReadonlyArray<EmailRow>): Effect.Effect<void, never, StoreDb> =>
-  tryDb((db) => {
+export const upsertEmails = (
+  rows: ReadonlyArray<EmailRow>,
+): Effect.Effect<void, StoreError, StoreDb> =>
+  tryDb("upsertEmails", (db) => {
     if (rows.length === 0) return;
     db.insert(emails)
       .values(rows.map(toEmailColumns))
@@ -113,8 +115,8 @@ export const upsertEmails = (rows: ReadonlyArray<EmailRow>): Effect.Effect<void,
 /** Hard-delete rows by JMAP id. Used by Incremental destroyed-set and Catchup reconciliation. */
 export const deleteEmailsByIds = (
   ids: ReadonlyArray<string>,
-): Effect.Effect<void, never, StoreDb> =>
-  tryDb((db) => {
+): Effect.Effect<void, StoreError, StoreDb> =>
+  tryDb("deleteEmailsByIds", (db) => {
     if (ids.length === 0) return;
     db.delete(emails)
       .where(inArray(emails.id, [...ids]))
@@ -128,8 +130,8 @@ export const deleteEmailsByIds = (
 export const setEmailUnread = (
   ids: ReadonlyArray<string>,
   unread: boolean,
-): Effect.Effect<void, never, StoreDb> =>
-  tryDb((db) => {
+): Effect.Effect<void, StoreError, StoreDb> =>
+  tryDb("setEmailUnread", (db) => {
     if (ids.length === 0) return;
     db.update(emails)
       .set({ isUnread: unread, lastSeen: new Date() })
@@ -148,8 +150,8 @@ export type SyncRunInput = {
 };
 
 /** Insert a Sync Run row and return it with its assigned id. */
-export const recordSyncRun = (input: SyncRunInput): Effect.Effect<SyncRun, never, StoreDb> =>
-  tryDb((db) => {
+export const recordSyncRun = (input: SyncRunInput): Effect.Effect<SyncRun, StoreError, StoreDb> =>
+  tryDb("recordSyncRun", (db) => {
     const inserted = db
       .insert(syncRuns)
       .values({
@@ -180,8 +182,10 @@ export const recordSyncRun = (input: SyncRunInput): Effect.Effect<SyncRun, never
  * Returns null when the Worker has never succeeded (fresh laptop or
  * sustained failure).
  */
-export const latestSyncRun = (workerName: string): Effect.Effect<SyncRun | null, never, StoreDb> =>
-  tryDb((db) => {
+export const latestSyncRun = (
+  workerName: string,
+): Effect.Effect<SyncRun | null, StoreError, StoreDb> =>
+  tryDb("latestSyncRun", (db) => {
     const row = db
       .select()
       .from(syncRuns)
@@ -199,8 +203,8 @@ export const latestSyncRun = (workerName: string): Effect.Effect<SyncRun | null,
  */
 export const latestSyncRunAttempt = (
   workerName: string,
-): Effect.Effect<SyncRun | null, never, StoreDb> =>
-  tryDb((db) => {
+): Effect.Effect<SyncRun | null, StoreError, StoreDb> =>
+  tryDb("latestSyncRunAttempt", (db) => {
     const row = db
       .select()
       .from(syncRuns)
@@ -214,8 +218,8 @@ export const latestSyncRunAttempt = (
 /** Fetch the cursor row for a Worker. null = Bootstrap path on next run. */
 export const getSyncCursor = (
   workerName: string,
-): Effect.Effect<SyncCursor | null, never, StoreDb> =>
-  tryDb((db) => {
+): Effect.Effect<SyncCursor | null, StoreError, StoreDb> =>
+  tryDb("getSyncCursor", (db) => {
     const row = db
       .select()
       .from(syncCursor)
@@ -229,8 +233,8 @@ export const getSyncCursor = (
 export const setSyncCursor = (
   workerName: string,
   stateToken: string,
-): Effect.Effect<void, never, StoreDb> =>
-  tryDb((db) => {
+): Effect.Effect<void, StoreError, StoreDb> =>
+  tryDb("setSyncCursor", (db) => {
     db.insert(syncCursor)
       .values({ workerName, stateToken, updatedAt: new Date() })
       .onConflictDoUpdate({

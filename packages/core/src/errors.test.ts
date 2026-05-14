@@ -30,9 +30,11 @@ describe("tagged errors", () => {
     expect(err._tag).toBe("AuthError");
   });
 
-  it("StoreError carries _tag", () => {
-    const err = new StoreError({ detail: "constraint violation" });
+  it("StoreError carries _tag, op, and detail", () => {
+    const err = new StoreError({ op: "upsertEmails", detail: "constraint violation" });
     expect(err._tag).toBe("StoreError");
+    expect(err.op).toBe("upsertEmails");
+    expect(err.detail).toBe("constraint violation");
   });
 
   it("MarkReadError carries _tag and emailId", () => {
