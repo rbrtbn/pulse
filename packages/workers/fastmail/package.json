@@ -1,0 +1,24 @@
+{
+  "name": "@cerebro/worker-fastmail",
+  "private": true,
+  "bin": {
+    "cerebro-sync-fastmail": "./src/cli.ts"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "sync": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@cerebro/core": "workspace:*",
+    "@cerebro/jmap": "workspace:*",
+    "@cerebro/store": "workspace:*",
+    "effect": "^3.18.6",
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "vitest": "catalog:"
+  }
+}
