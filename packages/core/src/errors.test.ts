@@ -5,7 +5,7 @@ import {
   AuthError,
   MalformedSourceResponse,
   MarkReadError,
-  StoreError,
+  DatabaseError,
   TransportError,
 } from "./errors";
 import { runTest } from "./testing";
@@ -31,9 +31,9 @@ describe("tagged errors", () => {
     expect(err._tag).toBe("AuthError");
   });
 
-  it("StoreError carries _tag, op, and detail", () => {
-    const err = new StoreError({ op: "upsertEmails", detail: "constraint violation" });
-    expect(err._tag).toBe("StoreError");
+  it("DatabaseError carries _tag, op, and detail", () => {
+    const err = new DatabaseError({ op: "upsertEmails", detail: "constraint violation" });
+    expect(err._tag).toBe("DatabaseError");
     expect(err.op).toBe("upsertEmails");
     expect(err.detail).toBe("constraint violation");
   });

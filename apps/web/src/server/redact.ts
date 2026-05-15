@@ -1,4 +1,4 @@
-import { newTraceId } from "@cerebro/core";
+import { newTraceId } from "@pulse/core";
 import { Cause, Effect, Exit } from "effect";
 
 /**
@@ -26,7 +26,7 @@ export const redactToLoader = async <A, E>(
 };
 
 /**
- * Stringify a Cause so the typed failure fields (`StoreError.op`, `.detail`,
+ * Stringify a Cause so the typed failure fields (`DatabaseError.op`, `.detail`,
  * …) actually land in the log. `Cause.pretty` alone only renders the tag
  * and stack — the field values it carries get dropped, which defeats the
  * point of logging.

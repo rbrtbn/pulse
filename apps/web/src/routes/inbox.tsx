@@ -1,16 +1,16 @@
-import type { SyncRun } from "@cerebro/core";
-import type { UnreadThread } from "@cerebro/store";
-import { Badge } from "@cerebro/ui-shadcn";
+import type { Run } from "@pulse/core";
+import type { UnreadThread } from "@pulse/database";
+import { Badge } from "@pulse/ui-shadcn";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { formatHybrid, formatTooltip } from "../lib/time-format";
-import { fetchLatestSyncRun, fetchUnreadThreads } from "../server/queries";
+import { fetchLatestRun, fetchUnreadThreads } from "../server/queries";
 
 export const Route = createFileRoute("/inbox")({
   loader: async () => {
     const [threads, latestSuccess] = await Promise.all([
       fetchUnreadThreads(),
-      fetchLatestSyncRun("fastmail"),
+      fetchLatestRun("fastmail"),
     ]);
     return { threads, latestSuccess };
   },
@@ -35,7 +35,7 @@ function InboxPage() {
   );
 }
 
-const FreshnessLine = ({ latestSuccess }: { latestSuccess: SyncRun | null }) => {
+const FreshnessLine = ({ latestSuccess }: { latestSuccess: Run | null }) => {
   if (latestSuccess === null) return null;
   return (
     <span className="text-xs text-neutral-500" title={formatTooltip(latestSuccess.startedAt)}>
@@ -44,7 +44,7 @@ const FreshnessLine = ({ latestSuccess }: { latestSuccess: SyncRun | null }) => 
   );
 };
 
-const EmptyState = ({ latestSuccess }: { latestSuccess: SyncRun | null }) => {
+const EmptyState = ({ latestSuccess }: { latestSuccess: Run | null }) => {
   if (latestSuccess === null) {
     return (
       <section className="rounded-lg border border-dashed border-neutral-300 p-8 text-center">

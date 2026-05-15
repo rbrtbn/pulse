@@ -4,7 +4,7 @@ import { FastmailJmap, type FastmailJmapClient } from "./client";
 
 /**
  * Build a test Layer for FastmailJmap that returns whatever the supplied
- * handlers produce. Worker tests inject this in place of the real client
+ * handlers produce. Connector tests inject this in place of the real client
  * so they don't hit Fastmail.
  *
  * Handlers can return either a plain value (auto-wrapped in Effect.succeed)

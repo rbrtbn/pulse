@@ -1,5 +1,5 @@
 {
-  "name": "@cerebro/web",
+  "name": "@pulse/web",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,9 +7,9 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@cerebro/core": "workspace:*",
-    "@cerebro/store": "workspace:*",
-    "@cerebro/ui-shadcn": "workspace:*",
+    "@pulse/core": "workspace:*",
+    "@pulse/database": "workspace:*",
+    "@pulse/ui-shadcn": "workspace:*",
     "@tanstack/react-router": "^1.114.3",
     "@tanstack/react-start": "^1.114.3",
     "effect": "catalog:",

@@ -3,9 +3,9 @@ export {
   CannotCalculateChanges,
   MalformedSourceResponse,
   MarkReadError,
-  StoreError,
+  DatabaseError,
   TransportError,
 } from "./errors";
 export { EmailRow, JmapEmail } from "./email";
-export { SyncCursor, SyncRun, SyncRunStatus } from "./sync";
+export { ConnectorCursor, Run, RunStatus } from "./run";
 export { newTraceId } from "./trace";

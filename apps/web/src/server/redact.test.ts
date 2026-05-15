@@ -1,4 +1,4 @@
-import { StoreError } from "@cerebro/core";
+import { DatabaseError } from "@pulse/core";
 import { Effect } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,8 +20,10 @@ describe("redactToLoader", () => {
   });
 
   it("redacts typed failures: throws generic Error with trace ID, logs full cause", async () => {
-    const sensitive = "unable to open database file: /Users/robertban/code/cerebro/data/cerebro.db";
-    const failing = Effect.fail(new StoreError({ op: "upcomingUnreadThreads", detail: sensitive }));
+    const sensitive = "unable to open database file: /Users/robertban/code/pulse/data/pulse.db";
+    const failing = Effect.fail(
+      new DatabaseError({ op: "upcomingUnreadThreads", detail: sensitive }),
+    );
 
     await expect(redactToLoader("Inbox", failing)).rejects.toThrow(
       /^Inbox unavailable \(trace=[0-9a-f]{8}\)$/,
@@ -49,7 +51,7 @@ describe("redactToLoader", () => {
   });
 
   it("re-uses the trace ID across the thrown message and the log line", async () => {
-    const failing = Effect.fail(new StoreError({ op: "test", detail: "x" }));
+    const failing = Effect.fail(new DatabaseError({ op: "test", detail: "x" }));
     try {
       await redactToLoader("Inbox", failing);
       expect.fail("should have thrown");
