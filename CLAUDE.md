@@ -186,11 +186,27 @@ pulse/
 
 ## Conventions (enforce from commit #1)
 
-### Branching
+### Branching & worktrees
 
-- One issue → one branch → one draft PR.
+- The **root checkout** (first entry of `git worktree list`) stays on
+  `main` — always. A `PreToolUse` hook denies `git switch` / `git checkout`
+  of any other branch there.
+- Do all work in a **worktree**, branched explicitly from latest main:
+
+  ```
+  git fetch origin
+  git worktree add ../pulse-<slug> -b <branch> origin/main
+  ```
+
+  The explicit `origin/main` start-point is load-bearing — it fixes the
+  base no matter what branch any checkout currently points at.
+- One issue → one branch → one worktree → one draft PR.
 - Branch name: `<issue-number>-<kebab-slug>`. Example: `12-add-run-table`.
 - **Never push to `main` directly.** Branch protection rejects it server-side.
+- The root's `main` is fast-forwarded automatically at session start and
+  after `gh pr merge` (the `sync-root-main.sh` hook). If a hook reports the
+  root is *not* on main, move the stray branch into its own worktree, then
+  `git -C <root> checkout main`.
 
 ### Commits
 
