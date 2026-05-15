@@ -10,7 +10,7 @@
 `CLAUDE.md` and `CONTEXT.md` establish the materialized-aggregator pattern:
 Connectors pull from Sources and write to the Database; Apps read from the
 Database. App-driven writes "round-trip through a Source (or
-Observer) — never via direct DB writes from App code."
+Agent) — never via direct DB writes from App code."
 
 Up until Milestone 1, no App-driven write existed — the eversports
 PRD ([#5](https://github.com/rbrtbn/pulse/issues/5)) deferred all writes
@@ -100,9 +100,9 @@ focused on rendering and intent.
 2. **Optimistic-update + rollback machinery** becomes load-bearing for
    UX. M1 is pessimistic; if/when optimistic becomes necessary, the Connector
    surface might need a more nuanced shape (queue, conflict resolution).
-3. **A Observer-driven write** (an external agent mutates state via a
+3. **A Agent-driven write** (an external agent mutates state via a
    path Pulse observes rather than initiates). Probably resolved by
-   treating the Observer as a Source like any other; flag if it bends
+   treating the Agent as a Source like any other; flag if it bends
    the rule.
 
 ## What this ADR does not decide

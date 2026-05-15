@@ -32,33 +32,35 @@ These are the moving parts of the materialized aggregator.
 
 Pulse carefully distinguishes three AI roles. They are NOT
 interchangeable — each has a different lifecycle, trigger, and access pattern.
-The bare word "agent" is **forbidden**; always name which one.
+Pulse's own two roles always go by their specific names — never the bare word
+"agent" for them. The capitalized **Agent** is reserved for the third role:
+external coding agents Pulse observes (see the next section).
 
 | Term       | Definition                                                                                          | Aliases to avoid                          |
 | ---------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| **Reporter**| The scheduled agent that reads the Database and produces Digests on a cadence. Writes back to the Database. | "curator", "summary agent", "background AI" |
+| **Reporter**| The scheduled agent that reads the Database and produces Digests on a cadence. Writes back to the Database. | "curator", "summary agent", "background AI", "the agent" |
 | **Digest** | The Reporter's structured output for a time period. Stored, versioned, rendered by Apps.           | "brief", "briefing", "summary", "report"  |
 | **Chat**   | The on-demand conversational agent. Has tool access to the Database (typed queries) and to MCP servers (for actions and uncached reads). | "concierge", "assistant", "the agent", "AI" |
 | **Session**| One conversation with Chat. Has a start, an end, and a transcript.                                 | "chat session", "thread", "conversation", "concierge session" |
 
 ## External agents Pulse observes (not owns)
 
-| Term         | Definition                                                                              | Aliases to avoid                  |
-| ------------ | --------------------------------------------------------------------------------------- | --------------------------------- |
-| **Observer** | An external coding agent (OpenClaw session, Claude Code background run, …) that Pulse observes as a Source. Distinguishes external agents from Pulse's own (Reporter, Chat). | "satellite", "outpost", "external agent", "remote agent" |
+| Term      | Definition                                                                              | Aliases to avoid                  |
+| --------- | --------------------------------------------------------------------------------------- | --------------------------------- |
+| **Agent** | An external coding agent that Pulse observes as a Source. Examples: a Claude Code background session, an OpenClaw mission, an Aider / Cursor / Cline / Goose session, a custom LLM-in-the-loop cron job. Distinguished from Pulse's own AI roles (Reporter, Chat), which have specific names. | "satellite", "outpost", "observer", "bot", "remote agent" |
 
 ## Apps
 
 | Term            | Definition                                                                                                                          | Aliases to avoid                  |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| **App**         | A way Rob interacts with Pulse. Reads the Database directly. Writes happen via Sources or Observers — never via direct DB writes from an App. | "interface", "frontend", "UI", "client", "surface" |
+| **App**         | A way Rob interacts with Pulse. Reads the Database directly. Writes happen via Sources or Agents — never via direct DB writes from an App. | "interface", "frontend", "UI", "client", "surface" |
 | **Web App**     | The primary dashboard. `apps/web`. TanStack Start + shadcn/ui. Milestone 1.                                                         | "the web interface", "the dashboard" |
 | **Desktop App** | Experimental OS-like UI with floating windows. `apps/desktop`. base-ui + react-rnd. Post-Milestone 1.                               | "the desktop interface", "the native app" |
 
 ## Transport
 
 A *transport* is a protocol a Connector (or the Chat) uses to reach a
-Source or Observer. Transports are pluggable per Source — they are not
+Source or Agent. Transports are pluggable per Source — they are not
 domain primitives, just the wiring underneath.
 
 | Term            | Definition                                                                       | Aliases to avoid                  |
@@ -66,7 +68,7 @@ domain primitives, just the wiring underneath.
 | **MCP Server**  | A Model Context Protocol server. The default transport for Sources we wire ourselves. Not synonymous with Source — a Source is the underlying system; MCP is one way to reach it. | "tool server" (when ambiguous)    |
 
 Connectors may also use **A2A** (Agent2Agent protocol) or vendor APIs (REST,
-GraphQL, file-system tailing) when the Source or Observer exposes one of
+GraphQL, file-system tailing) when the Source or Agent exposes one of
 those instead. Transport choice is a per-Connector implementation detail, not
 an architectural commitment.
 
@@ -89,8 +91,8 @@ Concrete realizations of the above terms, used in the first vertical slice.
 - The **Database** is written by **Connectors** (and the **Reporter**), and read by **Apps** and the **Chat**.
 - A **Digest** is produced by the **Reporter**, persisted to the **Database**, and rendered by **Apps**.
 - A **Session** reads from the **Database** and may invoke **MCP Servers** (or other transports) for live actions or uncached reads. It does not write to the Database.
-- An **Observer** is observed *via a Source* — Pulse never controls it.
-- An **App** never writes the Database directly. App-driven writes round-trip through a **Source** (the next **Run** picks up the change) or an **Observer**.
+- An **Agent** is observed *via a Source* — Pulse never controls it.
+- An **App** never writes the Database directly. App-driven writes round-trip through a **Source** (the next **Run** picks up the change) or an **Agent**.
 - A transport (**MCP Server**, **A2A**, vendor API) is wiring, not a Source. A Source may have zero, one, or many transports fronting it.
 
 ## Example dialogue
@@ -105,13 +107,13 @@ Concrete realizations of the above terms, used in the first vertical slice.
 >
 > **Rob:** "And if I had a Claude Code agent fixing the eversports-mcp server in the background, would Pulse know?"
 >
-> **Claude:** "Only if we model that agent as an **Observer** — i.e., add a Source for it and a Connector that ingests its status. Observers are external; Pulse observes them but never controls them. The transport would depend on what the Observer exposes — A2A if it speaks that, otherwise a vendor API or a file tail."
+> **Claude:** "Only if we model that agent as an **Agent** — i.e., add a Source for it and a Connector that ingests its status. Agents are external; Pulse observes them but never controls them. The transport would depend on what the Agent exposes — A2A if it speaks that, otherwise a vendor API or a file tail."
 
 ## Flagged ambiguities
 
-- **"agent"** — used in this codebase for three distinct things: the **Reporter** (scheduled), the **Chat** (on-demand), and **Observers** (external). The bare word "agent" is **forbidden**. Always name which one. **Connectors are NOT agents** — they are deterministic code with no LLM calls; calling them agents conflates the AI roles with ETL.
+- **"agent"** — Pulse has three things you might be tempted to call "an agent": the **Reporter** (scheduled), the **Chat** (on-demand), and **Agents** (external). Pulse's own roles always go by their specific names — say "Reporter" or "Chat", never "the agent" for them. The capitalized term **Agent** refers specifically to external coding agents Pulse observes as Sources. **Connectors are NOT Agents** — Connectors are deterministic code with no LLM calls; calling them agents conflates ETL with AI.
 - **"Source" vs "MCP Server"** — eversports is the **Source** (the underlying system); **eversports-mcp** is the MCP Server fronting it. A Source may exist without any MCP Server (e.g., a REST API a Connector hits directly). Don't use them interchangeably.
 - **"Run" vs "Connector"** — a **Connector** is a long-lived component (code that exists in the repo). A **Run** is one *execution* of that Connector (a row in `runs`). "The Connector failed" is ambiguous; prefer "the last **Run** for the eversports **Connector** failed."
 - **"Digest" vs "Chat response"** — both are AI outputs, but a **Digest** is materialized to the Database and versioned, while a **Chat** response is ephemeral within a **Session**. Don't conflate them.
 - **"App" vs directory name** — `apps/web` and `apps/desktop` are the *directories*; **Web App** and **Desktop App** are the *concepts*. They align — use either form naturally.
-- **"App" writes** — Apps *appear* to write (the user clicks "book a class") but never touch the Database directly. The action goes out via a **Source** or **Observer**, and the next **Run** brings the result back into the Database. If you find yourself calling Drizzle from an App route handler, you've broken the contract.
+- **"App" writes** — Apps *appear* to write (the user clicks "book a class") but never touch the Database directly. The action goes out via a **Source** or **Agent**, and the next **Run** brings the result back into the Database. If you find yourself calling Drizzle from an App route handler, you've broken the contract.

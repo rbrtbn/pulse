@@ -27,7 +27,7 @@ gym bookings, running coding agents — with a secondary conversational layer
 Per-Source **Connectors** pull data on schedules or via webhooks, normalize
 it into Pulse's schema, and write to the local Database. **Apps** read the
 Database directly. App-driven writes round-trip through a Source (or
-Observer) — never via direct DB writes from App code.
+Agent) — never via direct DB writes from App code.
 
 **Three roles for AI** (only Connectors exist in Milestone 1):
 
@@ -37,7 +37,7 @@ Observer) — never via direct DB writes from App code.
 3. **Chat** — on-demand conversational agent. Tool access to the Database
    (typed queries) and to MCP servers (for actions and uncached reads).
 
-**Observers** are external coding agents (OpenClaw sessions, Claude Code
+**Agents** are external coding agents (OpenClaw sessions, Claude Code
 background runs) that Pulse observes but does not own. A future Source.
 
 ---
@@ -55,19 +55,22 @@ The **bold** terms are canonical. Aliases in parentheses are forbidden.
   Single source of truth for the Apps.
 - **App** (NOT "interface", "frontend", "UI", "surface") — a way Rob
   interacts with Pulse. Reads the Database directly. Writes round-trip via
-  Sources or Observers — never direct DB writes from App code.
+  Sources or Agents — never direct DB writes from App code.
   Two exist: **Web App** (`apps/web`) and **Desktop App** (`apps/desktop`).
 - **Reporter** (NOT "curator", "summary agent", "background AI") — the
   scheduled agent that reads the Database and produces Digests.
 - **Digest** (NOT "brief", "briefing", "summary", "report") — the Reporter's
   structured output for a time period. Stored, versioned, rendered by Apps.
-- **Chat** (NOT "concierge", "assistant", "agent") — the on-demand
+- **Chat** (NOT "concierge", "assistant", "the agent") — the on-demand
   conversational agent. Each conversation is a **Session**.
-- **Observer** (NOT "satellite", "outpost", "external agent") — an external
-  coding agent that Pulse observes as a Source.
+- **Agent** (NOT "satellite", "outpost", "observer", "bot") — an external
+  coding agent that Pulse observes as a Source. Examples: a Claude Code
+  background session, an OpenClaw mission, an Aider / Cursor / Goose run,
+  a custom LLM-in-the-loop cron job. Distinct from Pulse's own AI roles
+  (Reporter, Chat), which have specific names. **Connectors are NOT Agents.**
 - **Run** (NOT "fetch", "poll cycle", "sync run") — one execution of a
   Connector against a Source. Has a status, started-at, ended-at, error.
-- **Transport** — protocol a Connector uses to reach a Source/Observer:
+- **Transport** — protocol a Connector uses to reach a Source/Agent:
   **MCP Server** (default), **A2A**, or vendor APIs. Per-Connector detail.
 
 The full ubiquitous-language doc is at [`CONTEXT.md`](./CONTEXT.md). When the
