@@ -104,8 +104,9 @@ two disagree, CONTEXT.md is the more recent source — update this glossary.
   NOT Mastra. NOT LangChain. NOT OpenClaw as a foundation.**
 - **Data integration:** official **MCP TypeScript SDK** as a client, with
   typed Effect wrappers in `packages/mcp`.
-- **Secrets:** macOS **Keychain** via `keyring exec` (entry point:
-  `bin/dev` and friends), populated from 1Password by `keyring sync`.
+- **Secrets:** macOS **Keychain** via `keyring exec` (entry point: the
+  `pnpm dev` script and `bin/sync-fastmail`), populated from 1Password by
+  `keyring sync`.
   Always write the canonical form `keyring sync` in docs and scripts —
   the `ks` shorthand is an interactive-zsh alias and won't be present
   in non-interactive shells, scripts, or fresh sessions. Items live in
