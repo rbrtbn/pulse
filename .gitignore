@@ -48,6 +48,9 @@ coverage/
 # Local tooling (not part of the project)
 .pi/
 
+# Claude Code worktrees — linked checkouts created under .claude/, never committed
+.claude/worktrees/
+
 # Caches
 .cache/
 .turbo/

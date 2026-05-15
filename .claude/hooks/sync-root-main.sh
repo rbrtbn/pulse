@@ -44,8 +44,11 @@ if [ "$branch" != "main" ]; then
   exit 0
 fi
 
-if [ -n "$(git -C "$main_wt" status --porcelain 2>/dev/null)" ]; then
-  emit "ℹ️ Root main has uncommitted changes — skipped fast-forward."
+# Tracked changes only. Untracked files never block a fast-forward —
+# and the root always has at least one (`.claude/worktrees/`), so a bare
+# `status --porcelain` would skip the fast-forward every single time.
+if [ -n "$(git -C "$main_wt" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+  emit "ℹ️ Root main has uncommitted tracked changes — skipped fast-forward."
   exit 0
 fi
 
