@@ -5,11 +5,11 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { formatHybrid, formatTooltip } from "../lib/time-format";
-import { syncNow } from "../server/actions";
-import { fetchInbox, type SyncFailure } from "../server/queries";
+import { fetchInboxData, syncNow } from "../server/actions";
+import type { SyncFailure } from "../server/queries";
 
 export const Route = createFileRoute("/inbox")({
-  loader: async () => fetchInbox(),
+  loader: () => fetchInboxData(),
   component: InboxPage,
 });
 
