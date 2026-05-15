@@ -39,15 +39,15 @@ export const runFastmailSync = <LE>(
 
 /**
  * Production entry point behind the /inbox "Sync now" button. Reads
- * `FASTMAIL_API_TOKEN` from the dev server's process env (populated by
- * `bin/dev` → `keyring exec`, the same precedent as `bin/sync-fastmail`),
- * runs one Run against the live Database, and redacts any raw
- * better-sqlite3 detail before it can reach the browser.
+ * `FASTMAIL_API_TOKEN` from the dev server's process env (injected by
+ * `keyring exec` via the `pnpm dev` script, the same precedent as
+ * `bin/sync-fastmail`), runs one Run against the live Database, and
+ * redacts any raw better-sqlite3 detail before it can reach the browser.
  */
 export const runSync = async (): Promise<SyncResult> => {
   const token = process.env[FASTMAIL_TOKEN_ENV];
   if (token === undefined || token === "") {
-    throw new Error(`${FASTMAIL_TOKEN_ENV} is not set — start the dev server via bin/dev`);
+    throw new Error(`${FASTMAIL_TOKEN_ENV} is not set — start the dev server via pnpm dev`);
   }
   const layers = Layer.merge(FastmailJmapLive({ token }), PulseDbAppLayer);
   return redactToLoader("Sync", runFastmailSync(layers));
