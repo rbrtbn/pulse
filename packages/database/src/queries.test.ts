@@ -10,6 +10,7 @@ import {
   deleteEmailsByIds,
   getEmailIdsSince,
   getConnectorCursor,
+  getThreadIdForEmail,
   getUnreadEmailIdsByThread,
   latestRun,
   latestRunAttempt,
@@ -348,6 +349,22 @@ describe("getConnectorCursor + setConnectorCursor", () => {
     });
     const result = await run(program.pipe(Effect.provide(layer)));
     expect(result?.stateToken).toBe("state-v2");
+  });
+});
+
+describe("getThreadIdForEmail", () => {
+  it("returns null when the email id is not in the Database", async () => {
+    const result = await run(getThreadIdForEmail("M-ghost").pipe(Effect.provide(testLayer())));
+    expect(result).toBeNull();
+  });
+
+  it("returns the thread id of a stored email", async () => {
+    const layer = testLayer();
+    const program = Effect.gen(function* () {
+      yield* upsertEmails([sampleEmail({ id: "M-1", threadId: "T-42" })]);
+      return yield* getThreadIdForEmail("M-1");
+    });
+    expect(await run(program.pipe(Effect.provide(layer)))).toBe("T-42");
   });
 });
 

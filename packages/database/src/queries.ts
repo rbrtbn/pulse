@@ -131,6 +131,23 @@ export const getEmailIdsSince = (
   });
 
 /**
+ * The thread id an email belongs to, or null when the id is not in the
+ * Database. markRead (M1.4) resolves a clicked row's email to its thread
+ * before marking every unread message in that thread read.
+ */
+export const getThreadIdForEmail = (
+  emailId: string,
+): Effect.Effect<string | null, DatabaseError, PulseDb> =>
+  tryDb("getThreadIdForEmail", (db) => {
+    const row = db
+      .select({ threadId: emails.threadId })
+      .from(emails)
+      .where(eq(emails.id, emailId))
+      .get();
+    return row?.threadId ?? null;
+  });
+
+/**
  * IDs of every still-unread email in a thread. markRead (M1.4) uses this
  * to build the JMAP `Email/set` batch — messages already read need no
  * round-trip — and to scope the follow-up Database update.
