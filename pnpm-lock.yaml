@@ -45,12 +45,18 @@ importers:
 
   apps/web:
     dependencies:
+      '@pulse/connector-fastmail':
+        specifier: workspace:*
+        version: link:../../packages/connectors/fastmail
       '@pulse/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@pulse/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@pulse/jmap':
+        specifier: workspace:*
+        version: link:../../packages/jmap
       '@pulse/ui-shadcn':
         specifier: workspace:*
         version: link:../../packages/ui/shadcn
