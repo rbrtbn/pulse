@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+/*
+ * Register this package's own components as a Tailwind source. Automatic
+ * content detection roots at the consuming app's Vite dir (apps/web) and
+ * never reaches packages/ui/shadcn, so the classes used by Button / Badge
+ * / Spinner would otherwise be dropped from the build. Path is relative
+ * to this stylesheet → packages/ui/shadcn/src.
+ */
+@source "../";
