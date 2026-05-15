@@ -4,21 +4,15 @@ import { Badge } from "@pulse/ui-shadcn";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { formatHybrid, formatTooltip } from "../lib/time-format";
-import { fetchLatestRun, fetchUnreadThreads } from "../server/queries";
+import { fetchInbox, type SyncFailure } from "../server/queries";
 
 export const Route = createFileRoute("/inbox")({
-  loader: async () => {
-    const [threads, latestSuccess] = await Promise.all([
-      fetchUnreadThreads(),
-      fetchLatestRun("fastmail"),
-    ]);
-    return { threads, latestSuccess };
-  },
+  loader: async () => fetchInbox(),
   component: InboxPage,
 });
 
 function InboxPage() {
-  const { threads, latestSuccess } = Route.useLoaderData();
+  const { threads, latestSuccess, failure } = Route.useLoaderData();
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
@@ -26,6 +20,7 @@ function InboxPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Inbox</h1>
         <FreshnessLine latestSuccess={latestSuccess} />
       </header>
+      {failure !== null ? <FailureBanner failure={failure} /> : null}
       {threads.length === 0 ? (
         <EmptyState latestSuccess={latestSuccess} />
       ) : (
@@ -34,6 +29,20 @@ function InboxPage() {
     </main>
   );
 }
+
+/**
+ * Calm-by-default sync health: renders nothing unless the latest Run
+ * attempt failed and no later success cleared it (the loader's
+ * `deriveFailure` decides — this component only paints).
+ */
+const FailureBanner = ({ failure }: { failure: SyncFailure }) => (
+  <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm">
+    <p className="font-medium text-red-800">Last sync failed — {failure.errorTag}</p>
+    {failure.errorMessage !== "" ? (
+      <p className="mt-0.5 text-red-700">{failure.errorMessage}</p>
+    ) : null}
+  </div>
+);
 
 const FreshnessLine = ({ latestSuccess }: { latestSuccess: Run | null }) => {
   if (latestSuccess === null) return null;
@@ -44,14 +53,19 @@ const FreshnessLine = ({ latestSuccess }: { latestSuccess: Run | null }) => {
   );
 };
 
+/**
+ * Two distinct empty cells per issue #15. State A — no successful sync
+ * exists: invite a first sync. State B — synced, nothing unread: confirm
+ * with the last-sync time. No shared "nothing to show" fallback.
+ */
 const EmptyState = ({ latestSuccess }: { latestSuccess: Run | null }) => {
   if (latestSuccess === null) {
     return (
       <section className="rounded-lg border border-dashed border-neutral-300 p-8 text-center">
         <p className="text-neutral-700">No sync yet.</p>
         <p className="mt-2 text-sm text-neutral-500">
-          Run <code className="rounded bg-neutral-100 px-1 py-0.5">bin/sync-fastmail</code> to
-          populate your inbox.
+          Run <code className="rounded bg-neutral-100 px-1 py-0.5">bin/sync-fastmail</code> or click
+          Sync now to populate your inbox.
         </p>
       </section>
     );
@@ -59,6 +73,9 @@ const EmptyState = ({ latestSuccess }: { latestSuccess: Run | null }) => {
   return (
     <section className="rounded-lg border border-dashed border-neutral-300 p-8 text-center">
       <p className="text-neutral-700">No unread threads. ✓</p>
+      <p className="mt-2 text-sm text-neutral-500" title={formatTooltip(latestSuccess.startedAt)}>
+        Last synced {formatHybrid(latestSuccess.startedAt)}.
+      </p>
     </section>
   );
 };
