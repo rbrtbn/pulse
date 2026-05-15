@@ -1,5 +1,6 @@
 export {
   AuthError,
+  CannotCalculateChanges,
   MalformedSourceResponse,
   MarkReadError,
   StoreError,

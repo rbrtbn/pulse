@@ -55,3 +55,17 @@ export class MarkReadError extends Data.TaggedError("MarkReadError")<{
   detail: string;
   emailId: string;
 }> {}
+
+/**
+ * The Source's change-stream cannot reconstruct the delta from the
+ * supplied state token — the server has compacted its change log past
+ * that point. Triggered by JMAP's `cannotCalculateChanges` method error.
+ *
+ * Distinct from `MalformedSourceResponse`: the response *is* well-formed
+ * — it's a protocol-level "I can no longer answer that". The Fastmail
+ * Worker catches this tag and falls back to the Catchup strategy
+ * (ID-diff against the 30-day window) per ADR 0004.
+ */
+export class CannotCalculateChanges extends Data.TaggedError("CannotCalculateChanges")<{
+  source: string;
+}> {}
