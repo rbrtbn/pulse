@@ -1,11 +1,12 @@
 import { resolve } from "node:path";
 
-import { AuthError, type EmailRow, TransportError } from "@cerebro/core";
+import { AuthError, CannotCalculateChanges, type EmailRow, TransportError } from "@cerebro/core";
 import { runTest } from "@cerebro/core/testing";
 import { FastmailJmap, FastmailJmapStub } from "@cerebro/jmap";
 import {
   getSyncCursor,
   latestSyncRunAttempt,
+  setSyncCursor,
   StoreDb,
   StoreDbTest,
   upcomingUnreadThreads,
@@ -229,5 +230,126 @@ describe("runWithEnvelope — independent of any concrete strategy", () => {
     });
     const threads = await runTest(program.pipe(Effect.provide(layers(FastmailJmapStub({})))));
     expect(threads).toEqual([]);
+  });
+});
+
+describe("runSyncRun — cursor-aware path selection", () => {
+  // The runSyncRun integration test surface — verifies that runSyncRun picks
+  // Bootstrap vs Incremental based on the cursor, and that the chosen
+  // strategy's CannotCalculateChanges fallback chains through to Catchup.
+  // Strategy-level behaviour is covered separately in strategy.test.ts.
+
+  it("picks Incremental when a cursor exists, applies the delta, advances the cursor", async () => {
+    const jmap = FastmailJmapStub({
+      // mailboxGet/emailQuery are intentionally absent — Bootstrap would
+      // call them. If runSyncRun mistakenly picked Bootstrap, the stub
+      // would die loudly with "no handler provided for mailboxGet".
+      emailChanges: () =>
+        Effect.succeed({
+          created: ["M-new"],
+          updated: [],
+          destroyed: [],
+          newState: "qs-2",
+          hasMoreChanges: false,
+        }),
+      emailGet: () =>
+        Effect.succeed([
+          {
+            id: "M-new",
+            threadId: "T-new",
+            mailboxIds: { "MBX-inbox": true },
+            keywords: { $seen: false },
+            from: [{ name: "Mira Patel", email: "mira@example.com" }],
+            subject: "incoming",
+            preview: "p",
+            receivedAt: "2026-05-14T14:00:00Z",
+          },
+        ]),
+    });
+    const program = Effect.gen(function* () {
+      yield* setSyncCursor(WORKER_NAME, "qs-1");
+      const run = yield* runSyncRun();
+      const cursor = yield* getSyncCursor(WORKER_NAME);
+      const threads = yield* upcomingUnreadThreads();
+      return { run, cursor, threads };
+    });
+    const result = await runTest(program.pipe(Effect.provide(layers(jmap))));
+    expect(result.run.status).toBe("succeeded");
+    expect(result.run.errorTag).toBeNull();
+    expect(result.cursor?.stateToken).toBe("qs-2");
+    expect(result.threads.map((t) => t.threadId)).toContain("T-new");
+  });
+
+  it("triggers Catchup fallback when Incremental gets cannotCalculateChanges — succeeded row carries the audit tag", async () => {
+    // Manually corrupt the cursor (the runbook scenario from issue #14).
+    // Incremental's emailChanges returns CannotCalculateChanges; the
+    // strategy's internal catchTag swaps to Catchup; the recorded SyncRun
+    // is `succeeded` with errorTag='recovered_via_catchup' per ADR 0004.
+    const recentDate = new Date("2026-05-14T14:00:00Z");
+    const seeded: EmailRow = {
+      id: "M-stale",
+      threadId: "T-stale",
+      isUnread: true,
+      fromName: null,
+      fromEmail: "x@example.com",
+      subject: "older",
+      preview: "p",
+      receivedAt: recentDate,
+      firstSeen: recentDate,
+      lastSeen: recentDate,
+      source: "fastmail",
+    };
+    const inboxMailbox2 = { id: "MBX-inbox", name: "INBOX", role: "inbox" };
+    const jmap = FastmailJmapStub({
+      emailChanges: () => Effect.fail(new CannotCalculateChanges({ source: "fastmail" })),
+      mailboxGet: () => Effect.succeed([inboxMailbox2]),
+      emailQuery: () => Effect.succeed({ ids: ["M-fresh"], queryState: "qs-fresh" }),
+      emailGet: () =>
+        Effect.succeed([
+          {
+            id: "M-fresh",
+            threadId: "T-fresh",
+            mailboxIds: { "MBX-inbox": true },
+            keywords: { $seen: false },
+            from: [{ name: "Mira Patel", email: "mira@example.com" }],
+            subject: "newer",
+            preview: "p",
+            receivedAt: "2026-05-14T14:00:00Z",
+          },
+        ]),
+    });
+    const program = Effect.gen(function* () {
+      yield* upsertEmails([seeded]);
+      yield* setSyncCursor(WORKER_NAME, "garbage-state");
+      const run = yield* runSyncRun();
+      const cursor = yield* getSyncCursor(WORKER_NAME);
+      const threads = yield* upcomingUnreadThreads();
+      return { run, cursor, threads };
+    });
+    const result = await runTest(program.pipe(Effect.provide(layers(jmap))));
+    expect(result.run.status).toBe("succeeded");
+    expect(result.run.errorTag).toBe("recovered_via_catchup");
+    expect(result.cursor?.stateToken).toBe("qs-fresh");
+    // Reconciliation: M-stale (local-only) gone, M-fresh (upstream-only) present.
+    expect(result.threads.map((t) => t.threadId).sort()).toEqual(["T-fresh"]);
+  });
+
+  it("still picks Bootstrap when no cursor row exists — Incremental short-circuit doesn't fire", async () => {
+    // Regression coverage for the acceptance criterion "Bootstrap path is
+    // still selected when no cursor row exists." Provides only Bootstrap-path
+    // stubs; if Incremental ran instead, emailChanges would die.
+    const inboxMailbox2 = { id: "MBX-inbox", name: "INBOX", role: "inbox" };
+    const jmap = FastmailJmapStub({
+      mailboxGet: () => Effect.succeed([inboxMailbox2]),
+      emailQuery: () => Effect.succeed({ ids: [], queryState: "qs-bootstrap" }),
+    });
+    const program = Effect.gen(function* () {
+      const run = yield* runSyncRun();
+      const cursor = yield* getSyncCursor(WORKER_NAME);
+      return { run, cursor };
+    });
+    const result = await runTest(program.pipe(Effect.provide(layers(jmap))));
+    expect(result.run.status).toBe("succeeded");
+    expect(result.cursor?.stateToken).toBe("qs-bootstrap");
   });
 });
