@@ -1,11 +1,20 @@
-import { AuthError, MalformedSourceResponse, newTraceId, TransportError } from "@cerebro/core";
+import {
+  AuthError,
+  CannotCalculateChanges,
+  MalformedSourceResponse,
+  newTraceId,
+  TransportError,
+} from "@cerebro/core";
 import { Context, Effect, Layer, Schema } from "effect";
 
 import {
+  EmailChangesResponseSchema,
+  type EmailChangesResult,
   EmailGetResponseSchema,
   type EmailQueryParams,
   type EmailQueryResult,
   EmailQueryResponseSchema,
+  type JmapChangesError,
   type JmapError,
   type JmapMethodCall,
   type JmapResponse,
@@ -39,6 +48,16 @@ export type FastmailJmapClient = {
     ids: ReadonlyArray<string>,
     properties?: ReadonlyArray<string>,
   ) => Effect.Effect<ReadonlyArray<unknown>, JmapError>;
+  /**
+   * Returns created / updated / destroyed sets since `sinceState`, plus
+   * the new state token. Produces `CannotCalculateChanges` (a separate
+   * tagged error, not `MalformedSourceResponse`) when the server has
+   * compacted its change log past `sinceState` — the Worker catches
+   * that tag and falls back to the Catchup strategy per ADR 0004.
+   */
+  readonly emailChanges: (
+    sinceState: string,
+  ) => Effect.Effect<EmailChangesResult, JmapChangesError>;
 };
 
 /** Effect Context tag. Imported by the Worker; provided by the Layer. */
@@ -134,6 +153,36 @@ const makeClient = (config: FastmailJmapConfig): Effect.Effect<FastmailJmapClien
       });
     };
 
+    // Variant of findResponse that routes JMAP's `cannotCalculateChanges`
+    // method error to its own tagged type instead of MalformedSourceResponse.
+    // The Worker's Catchup fallback depends on that routing — any other
+    // method error (anchorNotFound, etc.) is still redacted-and-logged like
+    // findResponse does.
+    const findChangesResponse = (
+      response: JmapResponse,
+    ): Effect.Effect<Record<string, unknown>, JmapChangesError> => {
+      for (const triple of response.methodResponses) {
+        const [name, payload, id] = triple;
+        if (id !== "c0") continue;
+        if (name === "Email/changes") return Effect.succeed(payload);
+        if (name === "error") {
+          if ((payload as { type?: unknown }).type === "cannotCalculateChanges") {
+            return new CannotCalculateChanges({ source: SOURCE });
+          }
+          const traceId = newTraceId();
+          console.error(`[trace=${traceId}] JMAP error for Email/changes:`, payload);
+          return new MalformedSourceResponse({
+            source: SOURCE,
+            detail: `JMAP returned error for Email/changes (trace=${traceId})`,
+          });
+        }
+      }
+      return new MalformedSourceResponse({
+        source: SOURCE,
+        detail: "JMAP response missing call Email/changes#c0",
+      });
+    };
+
     return {
       accountId,
       mailboxGet: (ids) =>
@@ -164,6 +213,12 @@ const makeClient = (config: FastmailJmapConfig): Effect.Effect<FastmailJmapClien
           const payload = yield* findResponse(response, "Email/get", "c0");
           const parsed = yield* decodeOrFail(EmailGetResponseSchema, payload);
           return parsed.list;
+        }),
+      emailChanges: (sinceState) =>
+        Effect.gen(function* () {
+          const response = yield* callApi([["Email/changes", { accountId, sinceState }, "c0"]]);
+          const payload = yield* findChangesResponse(response);
+          return yield* decodeOrFail(EmailChangesResponseSchema, payload);
         }),
     };
   });

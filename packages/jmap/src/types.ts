@@ -1,12 +1,26 @@
-import { type AuthError, type MalformedSourceResponse, type TransportError } from "@cerebro/core";
+import {
+  type AuthError,
+  type CannotCalculateChanges,
+  type MalformedSourceResponse,
+  type TransportError,
+} from "@cerebro/core";
 import { Schema } from "effect";
 
 /**
- * Union of all errors the JMAP client surfaces. Mapped from underlying
+ * Errors common to every JMAP client method. Mapped from underlying
  * causes (network, HTTP status, schema validation) to the tagged-error
  * inventory in @cerebro/core so callers handle them with `Effect.catchTag`.
  */
 export type JmapError = AuthError | MalformedSourceResponse | TransportError;
+
+/**
+ * Error union for `emailChanges` specifically — extends `JmapError` with
+ * the change-stream-specific failure that triggers the Catchup strategy
+ * per ADR 0004. Kept separate so the recovery error doesn't leak into
+ * method signatures (`mailboxGet`, `emailQuery`, `emailGet`) that can't
+ * actually produce it.
+ */
+export type JmapChangesError = JmapError | CannotCalculateChanges;
 
 /** A JMAP method call triple: ["Method/name", arguments, clientCallId]. */
 export type JmapMethodCall = readonly [string, Record<string, unknown>, string];
@@ -65,6 +79,20 @@ export type EmailQueryResult = Schema.Schema.Type<typeof EmailQueryResponseSchem
 export const EmailGetResponseSchema = Schema.Struct({
   list: Schema.Array(Schema.Unknown),
 });
+
+/**
+ * Email/changes response — IDs that entered, mutated, or vanished since
+ * `sinceState`. `newState` becomes the next cursor; `hasMoreChanges`
+ * signals a truncated batch (M1.2 picks up the rest on the next run).
+ */
+export const EmailChangesResponseSchema = Schema.Struct({
+  created: Schema.Array(Schema.String),
+  updated: Schema.Array(Schema.String),
+  destroyed: Schema.Array(Schema.String),
+  newState: Schema.String,
+  hasMoreChanges: Schema.Boolean,
+});
+export type EmailChangesResult = Schema.Schema.Type<typeof EmailChangesResponseSchema>;
 
 /** Filter passed to Email/query. The PRD only needs inMailbox + after. */
 export type EmailFilter = {
