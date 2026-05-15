@@ -1,0 +1,23 @@
+{
+  "name": "@pulse/database",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate:dev": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@pulse/core": "workspace:*",
+    "better-sqlite3": "catalog:",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "catalog:",
+    "drizzle-kit": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "name": "@cerebro/core",
+  "name": "@pulse/core",
   "private": true,
   "type": "module",
   "exports": {

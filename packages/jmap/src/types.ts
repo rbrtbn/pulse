@@ -3,13 +3,13 @@ import {
   type CannotCalculateChanges,
   type MalformedSourceResponse,
   type TransportError,
-} from "@cerebro/core";
+} from "@pulse/core";
 import { Schema } from "effect";
 
 /**
  * Errors common to every JMAP client method. Mapped from underlying
  * causes (network, HTTP status, schema validation) to the tagged-error
- * inventory in @cerebro/core so callers handle them with `Effect.catchTag`.
+ * inventory in @pulse/core so callers handle them with `Effect.catchTag`.
  */
 export type JmapError = AuthError | MalformedSourceResponse | TransportError;
 
@@ -73,7 +73,7 @@ export type EmailQueryResult = Schema.Schema.Type<typeof EmailQueryResponseSchem
 
 /**
  * Email/get response. The `list` entries are deliberately unknown — the
- * Worker validates each one against `JmapEmail` from `@cerebro/core`,
+ * Connector validates each one against `JmapEmail` from `@pulse/core`,
  * keeping the per-entry boundary check in one place.
  */
 export const EmailGetResponseSchema = Schema.Struct({

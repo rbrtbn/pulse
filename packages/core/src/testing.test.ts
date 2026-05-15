@@ -1,7 +1,7 @@
 import { Effect, Exit } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { StoreError } from "./errors";
+import { DatabaseError } from "./errors";
 import { runTest, runTestExit } from "./testing";
 
 describe("runTest", () => {
@@ -10,9 +10,9 @@ describe("runTest", () => {
   });
 
   it("rejects with the typed error on Effect.fail", async () => {
-    const failing = Effect.fail(new StoreError({ op: "x", detail: "boom" }));
+    const failing = Effect.fail(new DatabaseError({ op: "x", detail: "boom" }));
     await expect(runTest(failing)).rejects.toMatchObject({
-      _tag: "StoreError",
+      _tag: "DatabaseError",
       op: "x",
       detail: "boom",
     });
@@ -43,7 +43,7 @@ describe("runTestExit", () => {
   });
 
   it("returns the Exit on typed failure (does NOT throw)", async () => {
-    const failing = Effect.fail(new StoreError({ op: "x", detail: "boom" }));
+    const failing = Effect.fail(new DatabaseError({ op: "x", detail: "boom" }));
     const exit = await runTestExit(failing);
     expect(Exit.isFailure(exit)).toBe(true);
   });

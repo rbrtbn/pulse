@@ -1,16 +1,16 @@
-import type { SyncRun } from "@cerebro/core";
+import type { Run } from "@pulse/core";
 import {
-  latestSyncRun as latestSyncRunQuery,
+  latestRun as latestRunQuery,
   type UnreadThread,
   upcomingUnreadThreads as upcomingUnreadThreadsQuery,
-} from "@cerebro/store";
+} from "@pulse/database";
 import { Effect } from "effect";
 
-import { StoreDbAppLayer } from "./db";
+import { PulseDbAppLayer } from "./db";
 import { redactToLoader } from "./redact";
 
 /**
- * Thin async wrappers around the Effect-returning Store queries. Route
+ * Thin async wrappers around the Effect-returning Database queries. Route
  * loaders import these and treat them as plain Promises. The Effect ↔
  * Promise boundary lives here so route code stays free of Effect ceremony.
  *
@@ -21,10 +21,10 @@ import { redactToLoader } from "./redact";
  * under the same trace ID.
  */
 export const fetchUnreadThreads = (): Promise<UnreadThread[]> =>
-  redactToLoader("Inbox", upcomingUnreadThreadsQuery().pipe(Effect.provide(StoreDbAppLayer)));
+  redactToLoader("Inbox", upcomingUnreadThreadsQuery().pipe(Effect.provide(PulseDbAppLayer)));
 
-export const fetchLatestSyncRun = (workerName: string): Promise<SyncRun | null> =>
+export const fetchLatestRun = (connectorName: string): Promise<Run | null> =>
   redactToLoader(
     "Sync status",
-    latestSyncRunQuery(workerName).pipe(Effect.provide(StoreDbAppLayer)),
+    latestRunQuery(connectorName).pipe(Effect.provide(PulseDbAppLayer)),
   );

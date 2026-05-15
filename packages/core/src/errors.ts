@@ -3,7 +3,7 @@ import { Data } from "effect";
 /**
  * Schema validation failed at a Source boundary.
  *
- * Recorded as the error_tag on a failed Sync Run when the JMAP response did
+ * Recorded as the error_tag on a failed Run when the JMAP response did
  * not match the Effect Schema for JmapEmail (or any other Source response).
  */
 export class MalformedSourceResponse extends Data.TaggedError("MalformedSourceResponse")<{
@@ -24,7 +24,7 @@ export class TransportError extends Data.TaggedError("TransportError")<{
 
 /**
  * The Source rejected our credentials (HTTP 401 / 403, or a JMAP-level auth
- * error). Distinct from TransportError so the Worker (and the future Concierge
+ * error). Distinct from TransportError so the Connector (and the future Chat
  * surface) can prompt for re-auth specifically.
  */
 export class AuthError extends Data.TaggedError("AuthError")<{
@@ -33,19 +33,19 @@ export class AuthError extends Data.TaggedError("AuthError")<{
 }> {}
 
 /**
- * The Store rejected a read or write — e.g., a transaction conflict, a
- * constraint violation, a corrupt file. Indicates Cerebro-internal damage,
+ * The Database rejected a read or write — e.g., a transaction conflict, a
+ * constraint violation, a corrupt file. Indicates Pulse-internal damage,
  * not a Source problem. `op` names the query that failed so logs can
  * attribute the failure without a stack trace.
  */
-export class StoreError extends Data.TaggedError("StoreError")<{
+export class DatabaseError extends Data.TaggedError("DatabaseError")<{
   op: string;
   detail: string;
 }> {}
 
 /**
  * Mark-read failed end-to-end (JMAP Email/set rejected, or the subsequent
- * Store update failed). Distinct from StoreError because the failure can
+ * Database update failed). Distinct from DatabaseError because the failure can
  * surface inline on a /inbox row and the user can retry without restarting.
  *
  * Used by M1.2 (mark-read). Defined here in M1.1 so the error inventory is
@@ -63,7 +63,7 @@ export class MarkReadError extends Data.TaggedError("MarkReadError")<{
  *
  * Distinct from `MalformedSourceResponse`: the response *is* well-formed
  * — it's a protocol-level "I can no longer answer that". The Fastmail
- * Worker catches this tag and falls back to the Catchup strategy
+ * Connector catches this tag and falls back to the Catchup strategy
  * (ID-diff against the 30-day window) per ADR 0004.
  */
 export class CannotCalculateChanges extends Data.TaggedError("CannotCalculateChanges")<{

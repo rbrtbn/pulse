@@ -1,6 +1,6 @@
-# CLAUDE.md — Cerebro working conventions
+# CLAUDE.md — Pulse working conventions
 
-You are working on **Cerebro**, Rob's personal aggregator and assistant.
+You are working on **Pulse**, Rob's personal aggregator and assistant.
 This file is the single source of truth that survives context compaction.
 Treat it as authoritative. If something here conflicts with a stale memory
 or a guess from training data, **this file wins.**
@@ -12,33 +12,33 @@ prompts may be long-winded; extract the signal.
 
 ---
 
-## What Cerebro is
+## What Pulse is
 
 A personal aggregator and assistant: the single place Rob opens to see the
 state of his digital life — emails, articles, side-project status, calendar,
 gym bookings, running coding agents — with a secondary conversational layer
-(the Concierge) for synthesis and ad-hoc questions.
+(the Chat) for synthesis and ad-hoc questions.
 
-**Read-mostly dashboard first. Chat layer second.**
+**Read-mostly dashboard first. Chat second.**
 
 ## Architecture (decided — do not re-litigate)
 
-**Materialized aggregator pattern.** Cerebro owns its own SQLite database.
-Per-Source **Workers** pull data on schedules or via webhooks, normalize it
-into Cerebro's schema, and write to the local Store. **Interfaces** read the
-Store directly. Interface-driven writes round-trip through a Source (or
-Satellite) — never via direct DB writes from Interface code.
+**Materialized aggregator pattern.** Pulse owns its own SQLite database.
+Per-Source **Connectors** pull data on schedules or via webhooks, normalize
+it into Pulse's schema, and write to the local Database. **Apps** read the
+Database directly. App-driven writes round-trip through a Source (or
+Observer) — never via direct DB writes from App code.
 
-**Three roles for AI** (only Workers exist in Milestone 1):
+**Three roles for AI** (only Connectors exist in Milestone 1):
 
-1. **Workers** — deterministic ETL. NOT agents. Plain code. No LLM calls.
-2. **Curator** — scheduled agent producing Digests (summaries, anomaly flags,
-   ranked items) on a cadence. Writes structured output to the Store.
-3. **Concierge** — on-demand chat. Tool access to the Store (typed queries)
-   and to MCP servers (for actions and uncached reads).
+1. **Connectors** — deterministic ETL. NOT agents. Plain code. No LLM calls.
+2. **Reporter** — scheduled agent producing Digests (summaries, anomaly flags,
+   ranked items) on a cadence. Writes structured output to the Database.
+3. **Chat** — on-demand conversational agent. Tool access to the Database
+   (typed queries) and to MCP servers (for actions and uncached reads).
 
-**Satellites** are external coding agents (OpenClaw sessions, Claude Code
-background runs) that Cerebro observes but does not own. A future Source.
+**Observers** are external coding agents (OpenClaw sessions, Claude Code
+background runs) that Pulse observes but does not own. A future Source.
 
 ---
 
@@ -46,30 +46,29 @@ background runs) that Cerebro observes but does not own. A future Source.
 
 The **bold** terms are canonical. Aliases in parentheses are forbidden.
 
-- **Source** (NOT "data source", "integration") — an external system Cerebro
+- **Source** (NOT "data source", "integration") — an external system Pulse
   pulls from: Gmail, Notion, GitHub, eversports-mcp, etc.
-- **Worker** (NOT "sync agent", "ETL job") — the deterministic-code component
-  that pulls from one Source and writes to the Store. One Worker per Source.
-- **Store** (NOT "DB", "database", "cache") — the SQLite database Cerebro
-  owns. Single source of truth for the Interfaces.
-- **Interface** (NOT "frontend", "UI", "app", "surface") — a way Rob
-  interacts with Cerebro. Reads the Store directly. Writes round-trip via
-  Sources or Satellites — never direct DB writes from Interface code.
-  Two exist: **Web Interface** (`apps/web`) and **Desktop Interface**
-  (`apps/desktop`).
-- **Curator** (NOT "summary agent", "background AI") — the scheduled agent
-  that reads the Store and produces Digests.
-- **Digest** (NOT "brief", "briefing", "summary", "report") — the Curator's
-  structured output for a time period. Stored, versioned, rendered by
-  Interfaces.
-- **Concierge** (NOT "chat", "assistant", "agent") — the on-demand
-  conversational agent. Each conversation is a **Concierge Session**.
-- **Satellite** (NOT "outpost", "external agent", "remote agent") — an
-  external coding agent that Cerebro observes as a Source.
-- **Sync Run** (NOT "fetch", "poll cycle") — one execution of a Worker
-  against a Source. Has a status, started-at, ended-at, error.
-- **Transport** — protocol a Worker uses to reach a Source/Satellite:
-  **MCP Server** (default), **A2A**, or vendor APIs. Per-Worker detail.
+- **Connector** (NOT "worker", "sync agent", "ETL job") — the
+  deterministic-code component that pulls from one Source and writes to the
+  Database. One Connector per Source.
+- **Database** (NOT "store", "DB", "cache") — the SQLite file Pulse owns.
+  Single source of truth for the Apps.
+- **App** (NOT "interface", "frontend", "UI", "surface") — a way Rob
+  interacts with Pulse. Reads the Database directly. Writes round-trip via
+  Sources or Observers — never direct DB writes from App code.
+  Two exist: **Web App** (`apps/web`) and **Desktop App** (`apps/desktop`).
+- **Reporter** (NOT "curator", "summary agent", "background AI") — the
+  scheduled agent that reads the Database and produces Digests.
+- **Digest** (NOT "brief", "briefing", "summary", "report") — the Reporter's
+  structured output for a time period. Stored, versioned, rendered by Apps.
+- **Chat** (NOT "concierge", "assistant", "agent") — the on-demand
+  conversational agent. Each conversation is a **Session**.
+- **Observer** (NOT "satellite", "outpost", "external agent") — an external
+  coding agent that Pulse observes as a Source.
+- **Run** (NOT "fetch", "poll cycle", "sync run") — one execution of a
+  Connector against a Source. Has a status, started-at, ended-at, error.
+- **Transport** — protocol a Connector uses to reach a Source/Observer:
+  **MCP Server** (default), **A2A**, or vendor APIs. Per-Connector detail.
 
 The full ubiquitous-language doc is at [`CONTEXT.md`](./CONTEXT.md). When the
 two disagree, CONTEXT.md is the more recent source — update this glossary.
@@ -92,8 +91,8 @@ two disagree, CONTEXT.md is the more recent source — update this glossary.
     custom shell built on **react-rnd** for floating windows.
     **NOT react-mosaic.**
   - Shared primitives live in `packages/ui/primitives`.
-- **Database:** **SQLite** + **Drizzle ORM**, WAL mode. Local file. Migrate
-  to Postgres only if/when pgvector or concurrent writers force it.
+- **Database engine:** **SQLite** + **Drizzle ORM**, WAL mode. Local file.
+  Migrate to Postgres only if/when pgvector or concurrent writers force it.
 - **Business logic:** **Effect v3** throughout — typed errors via
   `Data.TaggedError`, dependency injection via Layers, structured
   concurrency. **NOT Effect v4 (still beta).**
@@ -107,7 +106,7 @@ two disagree, CONTEXT.md is the more recent source — update this glossary.
   Always write the canonical form `keyring sync` in docs and scripts —
   the `ks` shorthand is an interactive-zsh alias and won't be present
   in non-interactive shells, scripts, or fresh sessions. Items live in
-  1Password under titles like `cerebro/ANTHROPIC_API_KEY`, tag
+  1Password under titles like `pulse/ANTHROPIC_API_KEY`, tag
   `keychain-sync`. Never plain `.env`
   files committed; `.env.example` is the only env file in git. **Don't
   use `op run` here** — it's slow and exports secrets into the shell
@@ -117,14 +116,14 @@ two disagree, CONTEXT.md is the more recent source — update this glossary.
 
 ### Runtime environment
 
-Cerebro runs on Rob's home server ("loft"). When a task needs details about
+Pulse runs on Rob's home server ("loft"). When a task needs details about
 that host (services running, model server endpoints, Keychain item names,
 filesystem layout, what's auto-deployed via chezmoi), check the dotfiles
 repo at **`~/code/dotfiles/docs/hosts/loft.md`** if available — it is the
-source of truth. Cerebro does **not** duplicate that material here, because
+source of truth. Pulse does **not** duplicate that material here, because
 this repo is public and loft's topology lives in a private repo.
 
-Decisions about how cerebro *uses* that environment live in `docs/adr/`.
+Decisions about how Pulse *uses* that environment live in `docs/adr/`.
 
 ### Things to verify rather than assume
 
@@ -141,10 +140,10 @@ Use Context7 MCP for library docs. Don't guess current APIs.
 
 ---
 
-## Interfaces (apps/)
+## Apps (apps/)
 
 - `apps/web` — primary dashboard. TanStack Start + shadcn/ui.
-  **This is Milestone 1's Interface.**
+  **This is Milestone 1's App.**
 - `apps/desktop` — experimental OS-like UI with floating windows. base-ui +
   react-rnd + custom shell. Inspired by PostHog's UI. May later be wrapped
   in Tauri 2 for a native macOS app. **Not Milestone 1.**
@@ -152,7 +151,7 @@ Use Context7 MCP for library docs. Don't guess current APIs.
 ## Monorepo layout (target — create as needed, not all at once)
 
 ```
-cerebro/
+pulse/
 ├── .claude/                  # skills installed
 ├── .github/
 │   └── pull_request_template.md
@@ -161,14 +160,14 @@ cerebro/
 │   └── desktop/              # later
 ├── packages/
 │   ├── core/                 # Effect-based domain types, Schema, errors
-│   ├── store/                # Drizzle schemas, migrations, typed queries
-│   ├── ai/                   # Effect-wrapped AI SDK, Curator, Concierge
+│   ├── database/             # Drizzle schemas, migrations, typed queries
+│   ├── ai/                   # Effect-wrapped AI SDK, Reporter, Chat
 │   ├── mcp/                  # typed MCP client wrappers
 │   ├── ui/
 │   │   ├── primitives/       # base-ui re-exports + custom unstyled
 │   │   ├── shadcn/           # shadcn components (for apps/web)
 │   │   └── desktop/          # custom-styled wrappers (for apps/desktop)
-│   └── workers/              # one sub-package per Source
+│   └── connectors/           # one sub-package per Source
 │       └── eversports/       # Milestone 1
 ├── docs/
 │   └── adr/                  # ADRs, lazily created
@@ -188,13 +187,13 @@ cerebro/
 ### Branching
 
 - One issue → one branch → one draft PR.
-- Branch name: `<issue-number>-<kebab-slug>`. Example: `7-eversports-worker`.
+- Branch name: `<issue-number>-<kebab-slug>`. Example: `7-eversports-connector`.
 - **Never push to `main` directly.** Branch protection rejects it server-side.
 
 ### Commits
 
 - **Conventional Commits**: `feat:`, `fix:`, `refactor:`, `test:`, `chore:`,
-  `docs:`, `build:`, `ci:`. Optional scope: `feat(store): add SyncRun table`.
+  `docs:`, `build:`, `ci:`. Optional scope: `feat(database): add Run table`.
 - **Commit at every green test.** TDD cycle ends with a commit. Codebase is
   green at every commit. Fowler-style.
 - Commits are small. Aim for <100 lines diff per commit; if a commit feels
@@ -225,7 +224,7 @@ cerebro/
 - **Effect everywhere in business logic.** No `try`/`catch` — use
   `Effect.tryPromise` and `Data.TaggedError`. No raw Promises in domain code.
 - **No `any`.** No non-null assertions (`!`). No disabling strict mode.
-- **Schema validation at every boundary** — incoming MCP responses, Worker
+- **Schema validation at every boundary** — incoming MCP responses, Connector
   inputs, route loaders. **Effect Schema is the canonical choice** in this
   repo; do not introduce Zod. Effect Schema composes natively with
   `Effect.gen` / `Effect.tryPromise` and produces typed errors
@@ -234,7 +233,7 @@ cerebro/
 - **Comments explain why, not what.** If the code needs a comment to explain
   what it does, the code is wrong. (Rob's global preference: prefer
   `@praha/byethrow` Result<T, E> over throw/catch where applicable — but in
-  Cerebro, Effect is the canonical mechanism.)
+  Pulse, Effect is the canonical mechanism.)
 
 ### Effect error discipline
 
@@ -250,7 +249,7 @@ and to the type checker. Plain sync throws inside `Effect.gen` become
    helper that touches I/O (DB, network, filesystem, subprocess, parsing),
    stop: rewrite it around `Effect.try` so the error channel is honest.
 
-2. **Tests run via `runTest` / `runTestExit` from `@cerebro/core/testing`,
+2. **Tests run via `runTest` / `runTestExit` from `@pulse/core/testing`,
    not `Effect.runPromise` directly.** Those helpers trap defects as loud
    "Unexpected defect: …" failures, so any unwrapped throw in production
    code makes the relevant test fail with a clear signal instead of
@@ -290,8 +289,8 @@ workflow rule. The stops are intentional review gates.
 - No Next.js, Mastra, LangChain, OpenClaw, CopilotKit, Postgres, Docker,
   Cloudflare Workers, Tauri, react-mosaic, Biome, Turborepo, ESLint,
   Prettier.
-- No agent layer (no Curator, no Concierge). The Web Interface reads from
-  the Store; the Worker writes to the Store. That's the entire pipeline.
+- No agent layer (no Reporter, no Chat). The Web App reads from the
+  Database; the Connector writes to the Database. That's the entire pipeline.
 - No `apps/desktop` work. Defer the OS-like UI to a later milestone.
 - No `try`/`catch` in business logic — use Effect's typed errors.
 - No `any`. No non-null assertions (`!`). No disabling strict mode.
@@ -315,15 +314,15 @@ or whenever you sense the thread is lost — including unprompted.
 ## Milestone 1 — vertical slice
 
 **Goal:** prove the pipeline end-to-end with one Source. Add more Sources,
-the Curator, the Concierge, and the Desktop Interface only after this works
-and Rob has reviewed.
+the Reporter, the Chat, and the Desktop App only after this works and Rob
+has reviewed.
 
 **The slice:**
 
-`eversports-mcp Source → eversports Worker → Store (gym_bookings table) →
-Web Interface route showing upcoming bookings.`
+`eversports-mcp Source → eversports Connector → Database (gym_bookings table) →
+Web App route showing upcoming bookings.`
 
-That's it. No Curator, no Concierge, no other Sources, no `apps/desktop`,
+That's it. No Reporter, no Chat, no other Sources, no `apps/desktop`,
 no Docker, no remote deployment.
 
 **Note on eversports-mcp:** the MCP server exists but is currently stale.

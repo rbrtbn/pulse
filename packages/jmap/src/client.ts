@@ -4,7 +4,7 @@ import {
   MalformedSourceResponse,
   newTraceId,
   TransportError,
-} from "@cerebro/core";
+} from "@pulse/core";
 import { Context, Effect, Layer, Schema } from "effect";
 
 import {
@@ -29,7 +29,7 @@ const CORE_CAPABILITY = "urn:ietf:params:jmap:core";
 
 /**
  * Public interface of the JMAP client provided via Effect Layer. Consumers
- * (Fastmail Worker) inject this via `Effect.provide(FastmailJmapLive(...))`
+ * (Fastmail Connector) inject this via `Effect.provide(FastmailJmapLive(...))`
  * in production and `FastmailJmapStub(...)` in tests.
  */
 export type FastmailJmapClient = {
@@ -39,8 +39,8 @@ export type FastmailJmapClient = {
   ) => Effect.Effect<ReadonlyArray<Mailbox>, JmapError>;
   readonly emailQuery: (params: EmailQueryParams) => Effect.Effect<EmailQueryResult, JmapError>;
   /**
-   * Returns the raw JSON entries from JMAP Email/get. Callers (the Worker)
-   * validate each entry against `JmapEmail` from @cerebro/core — keeping
+   * Returns the raw JSON entries from JMAP Email/get. Callers (the Connector)
+   * validate each entry against `JmapEmail` from @pulse/core — keeping
    * the boundary check in one place rather than splitting it across
    * transport and consumer.
    */
@@ -52,7 +52,7 @@ export type FastmailJmapClient = {
    * Returns created / updated / destroyed sets since `sinceState`, plus
    * the new state token. Produces `CannotCalculateChanges` (a separate
    * tagged error, not `MalformedSourceResponse`) when the server has
-   * compacted its change log past `sinceState` — the Worker catches
+   * compacted its change log past `sinceState` — the Connector catches
    * that tag and falls back to the Catchup strategy per ADR 0004.
    */
   readonly emailChanges: (
@@ -60,8 +60,8 @@ export type FastmailJmapClient = {
   ) => Effect.Effect<EmailChangesResult, JmapChangesError>;
 };
 
-/** Effect Context tag. Imported by the Worker; provided by the Layer. */
-export class FastmailJmap extends Context.Tag("@cerebro/jmap/FastmailJmap")<
+/** Effect Context tag. Imported by the Connector; provided by the Layer. */
+export class FastmailJmap extends Context.Tag("@pulse/jmap/FastmailJmap")<
   FastmailJmap,
   FastmailJmapClient
 >() {}
@@ -137,7 +137,7 @@ const makeClient = (config: FastmailJmapConfig): Effect.Effect<FastmailJmapClien
         if (name === "error" && id === callId) {
           // The raw payload can contain Fastmail account IDs or other
           // internals we don't want crossing the network boundary via
-          // sync_runs.error_message. Log it server-side keyed by a trace
+          // runs.error_message. Log it server-side keyed by a trace
           // ID; surface only the trace ID in the error detail.
           const traceId = newTraceId();
           console.error(`[trace=${traceId}] JMAP error for ${method}:`, payload);
@@ -155,7 +155,7 @@ const makeClient = (config: FastmailJmapConfig): Effect.Effect<FastmailJmapClien
 
     // Variant of findResponse that routes JMAP's `cannotCalculateChanges`
     // method error to its own tagged type instead of MalformedSourceResponse.
-    // The Worker's Catchup fallback depends on that routing — any other
+    // The Connector's Catchup fallback depends on that routing — any other
     // method error (anchorNotFound, etc.) is still redacted-and-logged like
     // findResponse does.
     const findChangesResponse = (

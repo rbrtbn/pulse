@@ -1,5 +1,5 @@
 {
-  "name": "cerebro",
+  "name": "pulse",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,7 +7,7 @@
     "test": "vp test",
     "dev": "vp run web#dev",
     "build": "vp run -r build",
-    "sync:fastmail": "vp run workers-fastmail#sync"
+    "sync:fastmail": "vp run connector-fastmail#sync"
   },
   "devDependencies": {
     "typescript": "catalog:",

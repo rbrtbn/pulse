@@ -45,13 +45,13 @@ importers:
 
   apps/web:
     dependencies:
-      '@cerebro/core':
+      '@pulse/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@cerebro/store':
+      '@pulse/database':
         specifier: workspace:*
-        version: link:../../packages/store
-      '@cerebro/ui-shadcn':
+        version: link:../../packages/database
+      '@pulse/ui-shadcn':
         specifier: workspace:*
         version: link:../../packages/ui/shadcn
       '@tanstack/react-router':
@@ -95,6 +95,28 @@ importers:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.21(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(typescript@5.9.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0))'
 
+  packages/connectors/fastmail:
+    dependencies:
+      '@pulse/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@pulse/database':
+        specifier: workspace:*
+        version: link:../../database
+      '@pulse/jmap':
+        specifier: workspace:*
+        version: link:../../jmap
+      effect:
+        specifier: 'catalog:'
+        version: 3.21.2
+      tsx:
+        specifier: ^4.19.0
+        version: 4.22.0
+    devDependencies:
+      vitest:
+        specifier: npm:@voidzero-dev/vite-plus-test@latest
+        version: '@voidzero-dev/vite-plus-test@0.1.21(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(typescript@5.9.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0))'
+
   packages/core:
     dependencies:
       effect:
@@ -105,22 +127,9 @@ importers:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.21(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(typescript@5.9.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0))'
 
-  packages/jmap:
+  packages/database:
     dependencies:
-      '@cerebro/core':
-        specifier: workspace:*
-        version: link:../core
-      effect:
-        specifier: 'catalog:'
-        version: 3.21.2
-    devDependencies:
-      vitest:
-        specifier: npm:@voidzero-dev/vite-plus-test@latest
-        version: '@voidzero-dev/vite-plus-test@0.1.21(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(typescript@5.9.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0))'
-
-  packages/store:
-    dependencies:
-      '@cerebro/core':
+      '@pulse/core':
         specifier: workspace:*
         version: link:../core
       better-sqlite3:
@@ -143,6 +152,19 @@ importers:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.21(@types/node@25.8.0)(esbuild@0.19.12)(jiti@2.7.0)(tsx@4.22.0)(typescript@5.9.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.19.12)(jiti@2.7.0)(tsx@4.22.0))'
 
+  packages/jmap:
+    dependencies:
+      '@pulse/core':
+        specifier: workspace:*
+        version: link:../core
+      effect:
+        specifier: 'catalog:'
+        version: 3.21.2
+    devDependencies:
+      vitest:
+        specifier: npm:@voidzero-dev/vite-plus-test@latest
+        version: '@voidzero-dev/vite-plus-test@0.1.21(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(typescript@5.9.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0))'
+
   packages/ui/shadcn:
     dependencies:
       clsx:
@@ -164,28 +186,6 @@ importers:
       tailwindcss:
         specifier: ^4.0.0
         version: 4.3.0
-
-  packages/workers/fastmail:
-    dependencies:
-      '@cerebro/core':
-        specifier: workspace:*
-        version: link:../../core
-      '@cerebro/jmap':
-        specifier: workspace:*
-        version: link:../../jmap
-      '@cerebro/store':
-        specifier: workspace:*
-        version: link:../../store
-      effect:
-        specifier: 'catalog:'
-        version: 3.21.2
-      tsx:
-        specifier: ^4.19.0
-        version: 4.22.0
-    devDependencies:
-      vitest:
-        specifier: npm:@voidzero-dev/vite-plus-test@latest
-        version: '@voidzero-dev/vite-plus-test@0.1.21(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(typescript@5.9.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0))'
 
 packages:
 

@@ -70,7 +70,7 @@ const wellFormedEmailRow = {
 };
 
 describe("EmailRow schema", () => {
-  it("parses a well-formed Store row", () => {
+  it("parses a well-formed Database row", () => {
     const result = Schema.decodeUnknownEither(EmailRow)(wellFormedEmailRow);
     expect(Either.isRight(result)).toBe(true);
   });

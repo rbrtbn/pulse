@@ -1,12 +1,12 @@
 {
-  "name": "@cerebro/jmap",
+  "name": "@pulse/jmap",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@cerebro/core": "workspace:*",
+    "@pulse/core": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

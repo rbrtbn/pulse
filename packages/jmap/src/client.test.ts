@@ -1,4 +1,4 @@
-import { runTestExit } from "@cerebro/core/testing";
+import { runTestExit } from "@pulse/core/testing";
 import { Effect, Exit } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -165,7 +165,7 @@ describe("FastmailJmapLive — emailQuery + emailGet", () => {
     }
   });
 
-  it("emailGet returns the raw list array (Worker validates entries)", async () => {
+  it("emailGet returns the raw list array (Connector validates entries)", async () => {
     const fetchFn = fetchOk({
       "https://api.fastmail.com/jmap/session": json(200, sessionBody),
       "https://api.fastmail.com/jmap/api/": json(200, {
@@ -238,8 +238,8 @@ describe("FastmailJmapLive — emailChanges", () => {
   // emailChanges has bespoke response handling (does NOT use the shared
   // findResponse helper) so the `cannotCalculateChanges` JMAP method error
   // routes to its own tagged type instead of MalformedSourceResponse. The
-  // Worker's Catchup fallback depends on that routing — these tests guard
-  // against a silent regression that would record failed Sync Runs forever
+  // Connector's Catchup fallback depends on that routing — these tests guard
+  // against a silent regression that would record failed Runs forever
   // instead of recovering.
 
   const apiCall = (body: unknown) =>
