@@ -1,6 +1,12 @@
 import type { StoreError, SyncRun } from "@cerebro/core";
 import { FastmailJmap } from "@cerebro/jmap";
-import { recordSyncRun, setSyncCursor, StoreDb, upsertEmails } from "@cerebro/store";
+import {
+  deleteEmailsByIds,
+  recordSyncRun,
+  setSyncCursor,
+  StoreDb,
+  upsertEmails,
+} from "@cerebro/store";
 import { Effect } from "effect";
 
 import { bootstrapStrategy, type Strategy, type StrategyError } from "./strategy";
@@ -47,6 +53,7 @@ export const runWithEnvelope = (
     Effect.flatMap((result) =>
       Effect.gen(function* () {
         yield* upsertEmails(result.rows);
+        yield* deleteEmailsByIds(result.idsToDelete ?? []);
         yield* setSyncCursor(WORKER_NAME, result.cursorToken);
         return yield* recordSyncRun({
           workerName: WORKER_NAME,

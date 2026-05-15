@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import { AuthError, TransportError } from "@cerebro/core";
+import { AuthError, type EmailRow, TransportError } from "@cerebro/core";
 import { runTest } from "@cerebro/core/testing";
 import { FastmailJmap, FastmailJmapStub } from "@cerebro/jmap";
 import {
@@ -9,6 +9,7 @@ import {
   StoreDb,
   StoreDbTest,
   upcomingUnreadThreads,
+  upsertEmails,
 } from "@cerebro/store";
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
@@ -195,5 +196,38 @@ describe("runWithEnvelope — independent of any concrete strategy", () => {
     expect(result.run.errorTag).toBe("TransportError");
     expect(result.run.errorMessage).toBe("ECONNRESET");
     expect(result.cursor).toBeNull();
+  });
+
+  it("deletes the rows the strategy lists in idsToDelete", async () => {
+    // Seed a row, then run a strategy that asks for it to be deleted.
+    // The envelope must wire idsToDelete to deleteEmailsByIds, otherwise
+    // Incremental's `destroyed` set and Catchup's `missing` reconciliation
+    // would silently no-op.
+    const recentDate = new Date("2026-05-14T14:00:00Z");
+    const seeded: EmailRow = {
+      id: "M-condemned",
+      threadId: "T-condemned",
+      isUnread: true,
+      fromName: null,
+      fromEmail: "x@example.com",
+      subject: "deleteme",
+      preview: "p",
+      receivedAt: recentDate,
+      firstSeen: recentDate,
+      lastSeen: recentDate,
+      source: "fastmail",
+    };
+    const strategy: Strategy = Effect.succeed({
+      rows: [],
+      idsToDelete: ["M-condemned"],
+      cursorToken: "qs-after-delete",
+    });
+    const program = Effect.gen(function* () {
+      yield* upsertEmails([seeded]);
+      yield* runWithEnvelope(new Date(), strategy);
+      return yield* upcomingUnreadThreads();
+    });
+    const threads = await runTest(program.pipe(Effect.provide(layers(FastmailJmapStub({})))));
+    expect(threads).toEqual([]);
   });
 });
