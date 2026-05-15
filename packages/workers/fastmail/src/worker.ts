@@ -2,6 +2,7 @@ import type { StoreError, SyncRun } from "@cerebro/core";
 import { FastmailJmap } from "@cerebro/jmap";
 import {
   deleteEmailsByIds,
+  getSyncCursor,
   recordSyncRun,
   setSyncCursor,
   StoreDb,
@@ -9,30 +10,38 @@ import {
 } from "@cerebro/store";
 import { Effect } from "effect";
 
-import { bootstrapStrategy, type Strategy, type StrategyError } from "./strategy";
+import {
+  bootstrapStrategy,
+  incrementalStrategy,
+  type Strategy,
+  type StrategyError,
+} from "./strategy";
 
 export const WORKER_NAME = "fastmail";
 
 /**
- * One Sync Run. Picks a strategy (M1.1: always Bootstrap), runs it
+ * One Sync Run. Picks a strategy based on cursor state — Bootstrap on a
+ * fresh Store, Incremental once a cursor exists (with internal Catchup
+ * recovery when the cursor is rejected). Runs the chosen strategy
  * through the envelope, returns the recorded `SyncRun`.
  *
  * The envelope handles framing — startedAt/endedAt, the
- * `upsertEmails` + `setSyncCursor` writes on success, the
- * `recordSyncRun(failed)` route on Source-side errors. The residual
- * `StoreError` channel covers the rare case where the Store itself
- * is unreachable: no row to write, so the caller surfaces it
- * directly (the CLI's exit-code-2 path, the web loader's `redactToLoader`).
- *
- * **M1.1 ships the Bootstrap strategy only.** The cursor returned
- * from this run becomes the starting point for M1.2's Incremental
- * path. M1.1 always runs Bootstrap even when a cursor already exists
- * — re-fetching the 30-day window is idempotent under upsert.
+ * `upsertEmails` + `deleteEmailsByIds` + `setSyncCursor` writes on
+ * success, the `recordSyncRun(failed)` route on Source-side errors.
+ * The residual `StoreError` channel covers the rare case where the
+ * Store itself is unreachable: no row to write, so the caller surfaces
+ * it directly (the CLI's exit-code-2 path, the web loader's
+ * `redactToLoader`).
  */
 export const runSyncRun = (): Effect.Effect<SyncRun, StoreError, FastmailJmap | StoreDb> =>
   Effect.gen(function* () {
     const startedAt = new Date();
-    return yield* runWithEnvelope(startedAt, bootstrapStrategy(startedAt));
+    const cursor = yield* getSyncCursor(WORKER_NAME);
+    const strategy: Strategy =
+      cursor === null
+        ? bootstrapStrategy(startedAt)
+        : incrementalStrategy(startedAt, cursor.stateToken);
+    return yield* runWithEnvelope(startedAt, strategy);
   });
 
 /**
