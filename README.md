@@ -40,6 +40,6 @@ _To be filled in as the project develops._
 
 ```bash
 # pnpm i
-# keyring sync     # populate Keychain from 1Password (pulse/* items)
-# pnpm dev         # web dev server, FASTMAIL_API_TOKEN injected per-process
+# kr sync          # populate Keychain from 1Password (pulse/* items)
+# pnpm dev         # web dev server, pulse/* secrets injected per-process
 ```

@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 # One-shot Run for the Fastmail Connector. Wraps the Node CLI in
-# `keyring exec FASTMAIL_API_TOKEN -- ...` so the secret stays in this
-# child process — the surrounding shell (and any coding agent in it)
-# does not see it.
+# `kr exec -- ...` so the project's secrets stay in this child process —
+# the surrounding shell (and any coding agent in it) does not see them.
 #
 # Prereqs: 1Password item `pulse/FASTMAIL_API_TOKEN` tagged
-# `keychain-sync`, then `keyring sync` to populate the macOS Keychain.
-# KEYRING_PROJECT comes from .envrc.
+# `keychain-sync`, then `kr sync` to populate the macOS Keychain.
+# The project namespace comes from the repo-root `.keyring` file.
 
 set -euo pipefail
 
@@ -15,6 +14,5 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 REPO_ROOT="$( cd -- "${SCRIPT_DIR}/.." &> /dev/null && pwd )"
 cd "${REPO_ROOT}"
 
-exec keyring exec \
-  FASTMAIL_API_TOKEN \
+exec kr exec \
   -- pnpm --filter @pulse/connector-fastmail run sync "$@"
