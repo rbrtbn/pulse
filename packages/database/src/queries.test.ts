@@ -62,6 +62,7 @@ describe("upcomingUnreadThreads", () => {
     const result = await run(program.pipe(Effect.provide(layer)));
     expect(result).toHaveLength(1);
     expect(result[0]?.threadId).toBe("T-1");
+    expect(result[0]?.latestEmailId).toBe("M-1");
     expect(result[0]?.messageCount).toBe(1);
     expect(result[0]?.distinctOthers).toBe(0);
     expect(result[0]?.latestFromName).toBe("Mira Patel");
@@ -96,6 +97,8 @@ describe("upcomingUnreadThreads", () => {
     const result = await run(program.pipe(Effect.provide(layer)));
     expect(result).toHaveLength(1);
     expect(result[0]?.messageCount).toBe(2);
+    // latestEmailId tracks the newest message in the thread.
+    expect(result[0]?.latestEmailId).toBe("M-2");
   });
 
   it('counts distinct senders in distinctOthers ("+N" calculation)', async () => {

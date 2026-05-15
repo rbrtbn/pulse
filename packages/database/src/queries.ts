@@ -14,6 +14,8 @@ import { emails, connectorCursor, runs } from "./schema";
  */
 export type UnreadThread = {
   threadId: string;
+  /** Id of the latest message in the thread — the /inbox row passes it to markRead. */
+  latestEmailId: string;
   latestFromName: string | null;
   latestFromEmail: string;
   subject: string;
@@ -68,6 +70,7 @@ export const upcomingUnreadThreads = (): Effect.Effect<UnreadThread[], DatabaseE
       const distinctSenders = new Set(msgs.map((m) => m.fromEmail));
       threads.push({
         threadId,
+        latestEmailId: latest.id,
         latestFromName: latest.fromName,
         latestFromEmail: latest.fromEmail,
         subject: latest.subject,
