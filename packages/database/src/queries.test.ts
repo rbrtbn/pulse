@@ -10,6 +10,8 @@ import {
   deleteEmailsByIds,
   getEmailIdsSince,
   getConnectorCursor,
+  getThreadIdForEmail,
+  getUnreadEmailIdsByThread,
   latestRun,
   latestRunAttempt,
   recordRun,
@@ -60,6 +62,7 @@ describe("upcomingUnreadThreads", () => {
     const result = await run(program.pipe(Effect.provide(layer)));
     expect(result).toHaveLength(1);
     expect(result[0]?.threadId).toBe("T-1");
+    expect(result[0]?.latestEmailId).toBe("M-1");
     expect(result[0]?.messageCount).toBe(1);
     expect(result[0]?.distinctOthers).toBe(0);
     expect(result[0]?.latestFromName).toBe("Mira Patel");
@@ -94,6 +97,8 @@ describe("upcomingUnreadThreads", () => {
     const result = await run(program.pipe(Effect.provide(layer)));
     expect(result).toHaveLength(1);
     expect(result[0]?.messageCount).toBe(2);
+    // latestEmailId tracks the newest message in the thread.
+    expect(result[0]?.latestEmailId).toBe("M-2");
   });
 
   it('counts distinct senders in distinctOthers ("+N" calculation)', async () => {
@@ -347,6 +352,64 @@ describe("getConnectorCursor + setConnectorCursor", () => {
     });
     const result = await run(program.pipe(Effect.provide(layer)));
     expect(result?.stateToken).toBe("state-v2");
+  });
+});
+
+describe("getThreadIdForEmail", () => {
+  it("returns null when the email id is not in the Database", async () => {
+    const result = await run(getThreadIdForEmail("M-ghost").pipe(Effect.provide(testLayer())));
+    expect(result).toBeNull();
+  });
+
+  it("returns the thread id of a stored email", async () => {
+    const layer = testLayer();
+    const program = Effect.gen(function* () {
+      yield* upsertEmails([sampleEmail({ id: "M-1", threadId: "T-42" })]);
+      return yield* getThreadIdForEmail("M-1");
+    });
+    expect(await run(program.pipe(Effect.provide(layer)))).toBe("T-42");
+  });
+});
+
+describe("getUnreadEmailIdsByThread", () => {
+  it("returns an empty list when the thread has no rows", async () => {
+    const result = await run(getUnreadEmailIdsByThread("T-none").pipe(Effect.provide(testLayer())));
+    expect(result).toEqual([]);
+  });
+
+  it("returns only the unread message ids in the thread", async () => {
+    const layer = testLayer();
+    const program = Effect.gen(function* () {
+      yield* upsertEmails([
+        sampleEmail({ id: "M-1", threadId: "T-1", isUnread: true }),
+        sampleEmail({ id: "M-2", threadId: "T-1", isUnread: false }),
+        sampleEmail({ id: "M-3", threadId: "T-1", isUnread: true }),
+      ]);
+      return yield* getUnreadEmailIdsByThread("T-1");
+    });
+    const result = await run(program.pipe(Effect.provide(layer)));
+    expect([...result].sort()).toEqual(["M-1", "M-3"]);
+  });
+
+  it("returns an empty list when every message in the thread is already read", async () => {
+    const layer = testLayer();
+    const program = Effect.gen(function* () {
+      yield* upsertEmails([sampleEmail({ id: "M-1", threadId: "T-read", isUnread: false })]);
+      return yield* getUnreadEmailIdsByThread("T-read");
+    });
+    expect(await run(program.pipe(Effect.provide(layer)))).toEqual([]);
+  });
+
+  it("isolates unread ids to the requested thread", async () => {
+    const layer = testLayer();
+    const program = Effect.gen(function* () {
+      yield* upsertEmails([
+        sampleEmail({ id: "M-1", threadId: "T-1", isUnread: true }),
+        sampleEmail({ id: "M-2", threadId: "T-2", isUnread: true }),
+      ]);
+      return yield* getUnreadEmailIdsByThread("T-1");
+    });
+    expect(await run(program.pipe(Effect.provide(layer)))).toEqual(["M-1"]);
   });
 });
 

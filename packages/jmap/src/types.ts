@@ -94,6 +94,26 @@ export const EmailChangesResponseSchema = Schema.Struct({
 });
 export type EmailChangesResult = Schema.Schema.Type<typeof EmailChangesResponseSchema>;
 
+/**
+ * Email/set response. `updated` and `notUpdated` are id-keyed maps (null
+ * when empty). Only the keys matter — which ids the server applied the
+ * patch to, and which it refused — so the values stay `Unknown`.
+ */
+export const EmailSetResponseSchema = Schema.Struct({
+  updated: Schema.NullOr(Schema.Record({ key: Schema.String, value: Schema.Unknown })),
+  notUpdated: Schema.NullOr(Schema.Record({ key: Schema.String, value: Schema.Unknown })),
+});
+
+/**
+ * Normalized Email/set outcome: ids the server updated vs. refused. A
+ * non-empty `notUpdated` is a per-id JMAP failure — the Connector turns
+ * it into `MarkReadError`, distinct from a transport-level `JmapError`.
+ */
+export type EmailSetResult = {
+  readonly updated: ReadonlyArray<string>;
+  readonly notUpdated: ReadonlyArray<string>;
+};
+
 /** Filter passed to Email/query. The PRD only needs inMailbox + after. */
 export type EmailFilter = {
   readonly inMailbox?: string;

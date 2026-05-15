@@ -6,6 +6,7 @@ export type {
   EmailFilter,
   EmailQueryParams,
   EmailQueryResult,
+  EmailSetResult,
   EmailSort,
   JmapChangesError,
   JmapError,

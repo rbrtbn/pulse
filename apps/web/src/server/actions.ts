@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
+import { Schema } from "effect";
 
+import { type MarkReadResult, runMarkReadLive } from "./mark-read";
 import { fetchInbox, type InboxData } from "./queries";
 import { runSync, type SyncResult } from "./sync";
 
@@ -26,3 +28,17 @@ export const fetchInboxData = createServerFn().handler((): Promise<InboxData> =>
 export const syncNow = createServerFn({ method: "POST" }).handler(
   (): Promise<SyncResult> => runSync(),
 );
+
+/** Validated at the App boundary — Effect Schema, the repo's canonical check. */
+const MarkReadInput = Schema.Struct({ emailId: Schema.String });
+
+/**
+ * Server function behind a /inbox row click — the first App→Connector
+ * *write* (ADR 0003). Marks every unread message in the row's thread
+ * read upstream. Returns a structured `MarkReadResult` rather than
+ * throwing: `MarkReadError` is user-facing by design, so the row renders
+ * its tag + message inline and stays put for a retry.
+ */
+export const markRead = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => Schema.decodeUnknownSync(MarkReadInput)(data))
+  .handler(({ data }): Promise<MarkReadResult> => runMarkReadLive(data.emailId));

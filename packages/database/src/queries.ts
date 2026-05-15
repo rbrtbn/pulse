@@ -14,6 +14,8 @@ import { emails, connectorCursor, runs } from "./schema";
  */
 export type UnreadThread = {
   threadId: string;
+  /** Id of the latest message in the thread — the /inbox row passes it to markRead. */
+  latestEmailId: string;
   latestFromName: string | null;
   latestFromEmail: string;
   subject: string;
@@ -68,6 +70,7 @@ export const upcomingUnreadThreads = (): Effect.Effect<UnreadThread[], DatabaseE
       const distinctSenders = new Set(msgs.map((m) => m.fromEmail));
       threads.push({
         threadId,
+        latestEmailId: latest.id,
         latestFromName: latest.fromName,
         latestFromEmail: latest.fromEmail,
         subject: latest.subject,
@@ -126,6 +129,40 @@ export const getEmailIdsSince = (
       .select({ id: emails.id })
       .from(emails)
       .where(gte(emails.receivedAt, after))
+      .all();
+    return rows.map((r) => r.id);
+  });
+
+/**
+ * The thread id an email belongs to, or null when the id is not in the
+ * Database. markRead (M1.4) resolves a clicked row's email to its thread
+ * before marking every unread message in that thread read.
+ */
+export const getThreadIdForEmail = (
+  emailId: string,
+): Effect.Effect<string | null, DatabaseError, PulseDb> =>
+  tryDb("getThreadIdForEmail", (db) => {
+    const row = db
+      .select({ threadId: emails.threadId })
+      .from(emails)
+      .where(eq(emails.id, emailId))
+      .get();
+    return row?.threadId ?? null;
+  });
+
+/**
+ * IDs of every still-unread email in a thread. markRead (M1.4) uses this
+ * to build the JMAP `Email/set` batch — messages already read need no
+ * round-trip — and to scope the follow-up Database update.
+ */
+export const getUnreadEmailIdsByThread = (
+  threadId: string,
+): Effect.Effect<ReadonlyArray<string>, DatabaseError, PulseDb> =>
+  tryDb("getUnreadEmailIdsByThread", (db) => {
+    const rows = db
+      .select({ id: emails.id })
+      .from(emails)
+      .where(and(eq(emails.threadId, threadId), eq(emails.isUnread, true)))
       .all();
     return rows.map((r) => r.id);
   });

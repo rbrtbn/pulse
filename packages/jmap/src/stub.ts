@@ -23,5 +23,6 @@ export const FastmailJmapStub = (
     emailQuery: impl.emailQuery ?? ((_params) => unreachable("emailQuery")),
     emailGet: impl.emailGet ?? ((_ids, _props) => unreachable("emailGet")),
     emailChanges: impl.emailChanges ?? ((_sinceState) => unreachable("emailChanges")),
+    emailSet: impl.emailSet ?? ((_update) => unreachable("emailSet")),
   });
 };

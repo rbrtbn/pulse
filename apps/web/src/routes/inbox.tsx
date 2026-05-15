@@ -1,9 +1,10 @@
 import type { Run } from "@pulse/core";
 import type { UnreadThread } from "@pulse/database";
-import { Badge, Button, Spinner } from "@pulse/ui-shadcn";
+import { Button, Spinner } from "@pulse/ui-shadcn";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { ThreadRow } from "../components/thread-row";
 import { formatHybrid, formatTooltip } from "../lib/time-format";
 import { fetchInboxData, syncNow } from "../server/actions";
 import type { SyncFailure } from "../server/queries";
@@ -124,41 +125,7 @@ const EmptyState = ({ latestSuccess }: { latestSuccess: Run | null }) => {
 const ThreadList = ({ threads }: { threads: UnreadThread[] }) => (
   <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white">
     {threads.map((thread) => (
-      <li key={thread.threadId} className="p-4">
-        <div className="flex items-baseline justify-between gap-2">
-          <SenderDisplay thread={thread} />
-          <time
-            className="shrink-0 text-xs text-neutral-500"
-            dateTime={thread.receivedAt.toISOString()}
-            title={formatTooltip(thread.receivedAt)}
-          >
-            {formatHybrid(thread.receivedAt)}
-          </time>
-        </div>
-        <p className="mt-1 text-sm font-medium text-neutral-800">
-          {thread.subject || "(no subject)"}
-        </p>
-        <p className="mt-1 line-clamp-1 text-sm text-neutral-500">{thread.preview}</p>
-        {thread.messageCount > 1 ? (
-          <div className="mt-2">
-            <Badge variant="secondary">{thread.messageCount} msgs</Badge>
-          </div>
-        ) : null}
-      </li>
+      <ThreadRow key={thread.threadId} thread={thread} />
     ))}
   </ul>
 );
-
-const SenderDisplay = ({ thread }: { thread: UnreadThread }) => {
-  const primary = thread.latestFromName ?? thread.latestFromEmail;
-  return (
-    <span className="truncate text-sm font-semibold text-neutral-900">
-      {primary}
-      {thread.distinctOthers > 0 ? (
-        <span className="ml-1 text-xs font-normal text-neutral-500">
-          +{thread.distinctOthers.toString()} other{thread.distinctOthers === 1 ? "" : "s"}
-        </span>
-      ) : null}
-    </span>
-  );
-};

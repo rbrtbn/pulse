@@ -14,6 +14,8 @@ export {
   deleteEmailsByIds,
   getEmailIdsSince,
   getConnectorCursor,
+  getThreadIdForEmail,
+  getUnreadEmailIdsByThread,
   latestRun,
   latestRunAttempt,
   recordRun,
