@@ -21,7 +21,7 @@ Two AI roles, both deferred past Milestone 1:
 - **Chat** — on-demand conversational agent with tool access to the Database
   and MCP servers.
 
-**Observers** (external coding agents like OpenClaw sessions) are a future
+**Agents** (external coding agents like OpenClaw sessions) are a future
 Source — Pulse observes, doesn't own.
 
 See [`CONTEXT.md`](./CONTEXT.md) for the canonical glossary and
