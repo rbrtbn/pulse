@@ -47,7 +47,7 @@ background runs) that Pulse observes but does not own. A future Source.
 The **bold** terms are canonical. Aliases in parentheses are forbidden.
 
 - **Source** (NOT "data source", "integration") — an external system Pulse
-  pulls from: Gmail, Notion, GitHub, eversports-mcp, etc.
+  pulls from: Fastmail JMAP, Notion, GitHub, eversports-mcp, etc.
 - **Connector** (NOT "worker", "sync agent", "ETL job") — the
   deterministic-code component that pulls from one Source and writes to the
   Database. One Connector per Source.
@@ -171,7 +171,7 @@ pulse/
 │   │   ├── shadcn/           # shadcn components (for apps/web)
 │   │   └── desktop/          # custom-styled wrappers (for apps/desktop)
 │   └── connectors/           # one sub-package per Source
-│       └── eversports/       # Milestone 1
+│       └── fastmail/         # Milestone 1
 ├── docs/
 │   └── adr/                  # ADRs, lazily created
 ├── CLAUDE.md
@@ -190,7 +190,7 @@ pulse/
 ### Branching
 
 - One issue → one branch → one draft PR.
-- Branch name: `<issue-number>-<kebab-slug>`. Example: `7-eversports-connector`.
+- Branch name: `<issue-number>-<kebab-slug>`. Example: `15-m1-3-sync-button-ux-polish`.
 - **Never push to `main` directly.** Branch protection rejects it server-side.
 
 ### Commits
@@ -322,33 +322,36 @@ has reviewed.
 
 **The slice:**
 
-`eversports-mcp Source → eversports Connector → Database (gym_bookings table) →
-Web App route showing upcoming bookings.`
+`Fastmail JMAP Source → Fastmail Connector → Database (pulse_threads /
+pulse_emails / pulse_runs) → Web App route /inbox.`
 
 That's it. No Reporter, no Chat, no other Sources, no `apps/desktop`,
 no Docker, no remote deployment.
 
-**Note on eversports-mcp:** the MCP server exists but is currently stale.
-Rob will revive it before integration. Don't try to build the MCP server
-inside this repo.
+**Pivot note:** the original M1 slice targeted eversports-mcp (see closed
+issue #5). It was superseded by the Fastmail slice (PRD: issue #11) because
+the eversports MCP server is currently stale and Fastmail JMAP delivers
+higher daily utility on a live, well-specified protocol. The slice shape is
+identical; the Source changed.
+
+**M1 issues:**
+
+- ✅ #13 M1.1 — Read-only `/inbox` via Bootstrap-only Sync Run
+- ✅ #14 M1.2 — Incremental + Catchup Run kinds
+- 🔵 #15 M1.3 — Sync-now button + freshness UX + two-state empty UI
+- 🔵 #16 M1.4 — Mark-read from `/inbox`
 
 ---
 
 ## Workflow checkpoints
 
-Past Step 0 (this commit), the order is:
+Steps 1–4 are done. We're in Step 5.
 
-1. **Step 1 — Ubiquitous Language**: branch `docs-ubiquitous-language`,
-   produce `CONTEXT.md`. Draft PR. Stop.
-2. **Step 2 — PRD**: branch `docs-prd-v1`, run `to-prd`, file as a GitHub
-   issue. Stop.
-3. **Step 3 — Grill the PRD**: run `grill-me` on the PRD issue. Update with
-   answers. Write ADRs in `docs/adr/` only when a decision is **hard to
-   reverse, surprising without context, AND a real trade-off**.
-4. **Step 4 — Issues for Milestone 1**: run `to-issues` scoped to the
-   eversports vertical slice. Vertical-slice, AFK-where-possible,
-   dependency-ordered. Likely 5–8 issues. Stop.
-5. **Step 5 — Implementation**: per issue, branch + TDD + draft PR after
+1. ✅ **Step 1 — Ubiquitous Language**: `CONTEXT.md` produced.
+2. ✅ **Step 2 — PRD**: filed as issue #11 (supersedes #5).
+3. ✅ **Step 3 — Grill the PRD**: ADRs 0001–0005 live in `docs/adr/`.
+4. ✅ **Step 4 — Issues for Milestone 1**: #13–#16 filed.
+5. 🔵 **Step 5 — Implementation**: per issue, branch + TDD + draft PR after
    first commit + ready-for-review when all gates green. Stop between
    issues.
 
