@@ -7,8 +7,10 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@pulse/connector-fastmail": "workspace:*",
     "@pulse/core": "workspace:*",
     "@pulse/database": "workspace:*",
+    "@pulse/jmap": "workspace:*",
     "@pulse/ui-shadcn": "workspace:*",
     "@tanstack/react-router": "^1.114.3",
     "@tanstack/react-start": "^1.114.3",
