@@ -14,6 +14,8 @@ import {
   type EmailQueryParams,
   type EmailQueryResult,
   EmailQueryResponseSchema,
+  EmailSetResponseSchema,
+  type EmailSetResult,
   type JmapChangesError,
   type JmapError,
   type JmapMethodCall,
@@ -58,6 +60,15 @@ export type FastmailJmapClient = {
   readonly emailChanges: (
     sinceState: string,
   ) => Effect.Effect<EmailChangesResult, JmapChangesError>;
+  /**
+   * Sets properties on existing emails via JMAP `Email/set`. `update` is
+   * the id-keyed patch map — e.g. `{ [id]: { "keywords/$seen": true } }`.
+   * Returns which ids the server updated vs. refused; a non-empty
+   * `notUpdated` is a per-id failure, not a transport error.
+   */
+  readonly emailSet: (
+    update: Record<string, Record<string, unknown>>,
+  ) => Effect.Effect<EmailSetResult, JmapError>;
 };
 
 /** Effect Context tag. Imported by the Connector; provided by the Layer. */
@@ -219,6 +230,16 @@ const makeClient = (config: FastmailJmapConfig): Effect.Effect<FastmailJmapClien
           const response = yield* callApi([["Email/changes", { accountId, sinceState }, "c0"]]);
           const payload = yield* findChangesResponse(response);
           return yield* decodeOrFail(EmailChangesResponseSchema, payload);
+        }),
+      emailSet: (update) =>
+        Effect.gen(function* () {
+          const response = yield* callApi([["Email/set", { accountId, update }, "c0"]]);
+          const payload = yield* findResponse(response, "Email/set", "c0");
+          const parsed = yield* decodeOrFail(EmailSetResponseSchema, payload);
+          return {
+            updated: Object.keys(parsed.updated ?? {}),
+            notUpdated: Object.keys(parsed.notUpdated ?? {}),
+          };
         }),
     };
   });

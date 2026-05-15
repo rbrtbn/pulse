@@ -368,3 +368,73 @@ describe("FastmailJmapLive — emailChanges", () => {
     }
   });
 });
+
+describe("FastmailJmapLive — emailSet", () => {
+  it("normalizes updated/notUpdated maps to id arrays on a healthy response", async () => {
+    const fetchFn = fetchOk({
+      "https://api.fastmail.com/jmap/session": json(200, sessionBody),
+      "https://api.fastmail.com/jmap/api/": json(200, {
+        sessionState: "s1",
+        methodResponses: [
+          ["Email/set", { updated: { "M-1": null, "M-2": null }, notUpdated: null }, "c0"],
+        ],
+      }),
+    });
+    const program = Effect.gen(function* () {
+      const client = yield* FastmailJmap;
+      return yield* client.emailSet({
+        "M-1": { "keywords/$seen": true },
+        "M-2": { "keywords/$seen": true },
+      });
+    });
+    const exit = await runClient(program, fetchFn);
+    expect(Exit.isSuccess(exit)).toBe(true);
+    if (Exit.isSuccess(exit)) {
+      expect(exit.value).toEqual({ updated: ["M-1", "M-2"], notUpdated: [] });
+    }
+  });
+
+  it("surfaces ids the server refused in notUpdated, not as a transport error", async () => {
+    const fetchFn = fetchOk({
+      "https://api.fastmail.com/jmap/session": json(200, sessionBody),
+      "https://api.fastmail.com/jmap/api/": json(200, {
+        sessionState: "s1",
+        methodResponses: [
+          [
+            "Email/set",
+            { updated: { "M-1": null }, notUpdated: { "M-2": { type: "notFound" } } },
+            "c0",
+          ],
+        ],
+      }),
+    });
+    const program = Effect.gen(function* () {
+      const client = yield* FastmailJmap;
+      return yield* client.emailSet({
+        "M-1": { "keywords/$seen": true },
+        "M-2": { "keywords/$seen": true },
+      });
+    });
+    const exit = await runClient(program, fetchFn);
+    expect(Exit.isSuccess(exit)).toBe(true);
+    if (Exit.isSuccess(exit)) {
+      expect(exit.value).toEqual({ updated: ["M-1"], notUpdated: ["M-2"] });
+    }
+  });
+
+  it("returns MalformedSourceResponse when the Email/set call id is missing", async () => {
+    const fetchFn = fetchOk({
+      "https://api.fastmail.com/jmap/session": json(200, sessionBody),
+      "https://api.fastmail.com/jmap/api/": json(200, { sessionState: "s1", methodResponses: [] }),
+    });
+    const program = Effect.gen(function* () {
+      const client = yield* FastmailJmap;
+      return yield* client.emailSet({ "M-1": { "keywords/$seen": true } });
+    });
+    const exit = await runClient(program, fetchFn);
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (Exit.isFailure(exit)) {
+      expect(JSON.stringify(exit.cause)).toContain("MalformedSourceResponse");
+    }
+  });
+});
