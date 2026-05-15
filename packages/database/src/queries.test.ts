@@ -10,6 +10,7 @@ import {
   deleteEmailsByIds,
   getEmailIdsSince,
   getConnectorCursor,
+  getUnreadEmailIdsByThread,
   latestRun,
   latestRunAttempt,
   recordRun,
@@ -347,6 +348,48 @@ describe("getConnectorCursor + setConnectorCursor", () => {
     });
     const result = await run(program.pipe(Effect.provide(layer)));
     expect(result?.stateToken).toBe("state-v2");
+  });
+});
+
+describe("getUnreadEmailIdsByThread", () => {
+  it("returns an empty list when the thread has no rows", async () => {
+    const result = await run(getUnreadEmailIdsByThread("T-none").pipe(Effect.provide(testLayer())));
+    expect(result).toEqual([]);
+  });
+
+  it("returns only the unread message ids in the thread", async () => {
+    const layer = testLayer();
+    const program = Effect.gen(function* () {
+      yield* upsertEmails([
+        sampleEmail({ id: "M-1", threadId: "T-1", isUnread: true }),
+        sampleEmail({ id: "M-2", threadId: "T-1", isUnread: false }),
+        sampleEmail({ id: "M-3", threadId: "T-1", isUnread: true }),
+      ]);
+      return yield* getUnreadEmailIdsByThread("T-1");
+    });
+    const result = await run(program.pipe(Effect.provide(layer)));
+    expect([...result].sort()).toEqual(["M-1", "M-3"]);
+  });
+
+  it("returns an empty list when every message in the thread is already read", async () => {
+    const layer = testLayer();
+    const program = Effect.gen(function* () {
+      yield* upsertEmails([sampleEmail({ id: "M-1", threadId: "T-read", isUnread: false })]);
+      return yield* getUnreadEmailIdsByThread("T-read");
+    });
+    expect(await run(program.pipe(Effect.provide(layer)))).toEqual([]);
+  });
+
+  it("isolates unread ids to the requested thread", async () => {
+    const layer = testLayer();
+    const program = Effect.gen(function* () {
+      yield* upsertEmails([
+        sampleEmail({ id: "M-1", threadId: "T-1", isUnread: true }),
+        sampleEmail({ id: "M-2", threadId: "T-2", isUnread: true }),
+      ]);
+      return yield* getUnreadEmailIdsByThread("T-1");
+    });
+    expect(await run(program.pipe(Effect.provide(layer)))).toEqual(["M-1"]);
   });
 });
 

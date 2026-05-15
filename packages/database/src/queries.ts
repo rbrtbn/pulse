@@ -130,6 +130,23 @@ export const getEmailIdsSince = (
     return rows.map((r) => r.id);
   });
 
+/**
+ * IDs of every still-unread email in a thread. markRead (M1.4) uses this
+ * to build the JMAP `Email/set` batch — messages already read need no
+ * round-trip — and to scope the follow-up Database update.
+ */
+export const getUnreadEmailIdsByThread = (
+  threadId: string,
+): Effect.Effect<ReadonlyArray<string>, DatabaseError, PulseDb> =>
+  tryDb("getUnreadEmailIdsByThread", (db) => {
+    const rows = db
+      .select({ id: emails.id })
+      .from(emails)
+      .where(and(eq(emails.threadId, threadId), eq(emails.isUnread, true)))
+      .all();
+    return rows.map((r) => r.id);
+  });
+
 /** Hard-delete rows by JMAP id. Used by Incremental destroyed-set and Catchup reconciliation. */
 export const deleteEmailsByIds = (
   ids: ReadonlyArray<string>,
