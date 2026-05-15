@@ -233,3 +233,138 @@ describe("FastmailJmapLive — emailQuery + emailGet", () => {
     expect(Exit.isFailure(exit)).toBe(true);
   });
 });
+
+describe("FastmailJmapLive — emailChanges", () => {
+  // emailChanges has bespoke response handling (does NOT use the shared
+  // findResponse helper) so the `cannotCalculateChanges` JMAP method error
+  // routes to its own tagged type instead of MalformedSourceResponse. The
+  // Worker's Catchup fallback depends on that routing — these tests guard
+  // against a silent regression that would record failed Sync Runs forever
+  // instead of recovering.
+
+  const apiCall = (body: unknown) =>
+    fetchOk({
+      "https://api.fastmail.com/jmap/session": json(200, sessionBody),
+      "https://api.fastmail.com/jmap/api/": json(200, body),
+    });
+
+  it("parses created/updated/destroyed/newState/hasMoreChanges on a healthy response", async () => {
+    const fetchFn = apiCall({
+      sessionState: "s1",
+      methodResponses: [
+        [
+          "Email/changes",
+          {
+            created: ["M-c1", "M-c2"],
+            updated: ["M-u1"],
+            destroyed: ["M-d1"],
+            newState: "state-2",
+            hasMoreChanges: false,
+          },
+          "c0",
+        ],
+      ],
+    });
+    const program = Effect.gen(function* () {
+      const client = yield* FastmailJmap;
+      return yield* client.emailChanges("state-1");
+    });
+    const exit = await runClient(program, fetchFn);
+    expect(Exit.isSuccess(exit)).toBe(true);
+    if (Exit.isSuccess(exit)) {
+      expect(exit.value).toEqual({
+        created: ["M-c1", "M-c2"],
+        updated: ["M-u1"],
+        destroyed: ["M-d1"],
+        newState: "state-2",
+        hasMoreChanges: false,
+      });
+    }
+  });
+
+  it("maps `cannotCalculateChanges` to its own tag, NOT MalformedSourceResponse", async () => {
+    const fetchFn = apiCall({
+      sessionState: "s1",
+      methodResponses: [["error", { type: "cannotCalculateChanges" }, "c0"]],
+    });
+    const program = Effect.gen(function* () {
+      const client = yield* FastmailJmap;
+      return yield* client.emailChanges("stale-state");
+    });
+    const exit = await runClient(program, fetchFn);
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (Exit.isFailure(exit)) {
+      const cause = JSON.stringify(exit.cause);
+      expect(cause).toContain("CannotCalculateChanges");
+      expect(cause).not.toContain("MalformedSourceResponse");
+    }
+  });
+
+  describe("non-cannotCalculateChanges JMAP method error", () => {
+    let errorSpy: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+      errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+    afterEach(() => {
+      errorSpy.mockRestore();
+    });
+
+    it("redacts the payload, logs it server-side with a trace ID, surfaces MalformedSourceResponse", async () => {
+      const fetchFn = apiCall({
+        sessionState: "s1",
+        methodResponses: [["error", { type: "anchorNotFound", accountId: "u-secret-2" }, "c0"]],
+      });
+      const program = Effect.gen(function* () {
+        const client = yield* FastmailJmap;
+        return yield* client.emailChanges("state-1");
+      });
+      const exit = await runClient(program, fetchFn);
+      expect(Exit.isFailure(exit)).toBe(true);
+      if (Exit.isFailure(exit)) {
+        const cause = JSON.stringify(exit.cause);
+        expect(cause).toContain("MalformedSourceResponse");
+        expect(cause).not.toContain("anchorNotFound");
+        expect(cause).not.toContain("u-secret-2");
+        expect(cause).toMatch(/trace=[0-9a-f]{8}/);
+        expect(errorSpy).toHaveBeenCalledTimes(1);
+        const [logMessage, loggedPayload] = errorSpy.mock.calls[0] ?? [];
+        expect(String(logMessage)).toMatch(/^\[trace=[0-9a-f]{8}\] JMAP error for Email\/changes:/);
+        expect(loggedPayload).toEqual({ type: "anchorNotFound", accountId: "u-secret-2" });
+      }
+    });
+  });
+
+  it("returns MalformedSourceResponse when the method response is missing", async () => {
+    const fetchFn = apiCall({ sessionState: "s1", methodResponses: [] });
+    const program = Effect.gen(function* () {
+      const client = yield* FastmailJmap;
+      return yield* client.emailChanges("state-1");
+    });
+    const exit = await runClient(program, fetchFn);
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (Exit.isFailure(exit)) {
+      const cause = JSON.stringify(exit.cause);
+      expect(cause).toContain("MalformedSourceResponse");
+      expect(cause).toContain("missing call Email/changes");
+    }
+  });
+
+  it("returns MalformedSourceResponse when the response shape fails schema validation", async () => {
+    const fetchFn = apiCall({
+      sessionState: "s1",
+      methodResponses: [
+        // hasMoreChanges missing — required by EmailChangesResponseSchema
+        ["Email/changes", { created: [], updated: [], destroyed: [], newState: "s2" }, "c0"],
+      ],
+    });
+    const program = Effect.gen(function* () {
+      const client = yield* FastmailJmap;
+      return yield* client.emailChanges("state-1");
+    });
+    const exit = await runClient(program, fetchFn);
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (Exit.isFailure(exit)) {
+      expect(JSON.stringify(exit.cause)).toContain("MalformedSourceResponse");
+    }
+  });
+});
