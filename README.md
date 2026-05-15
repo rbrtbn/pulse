@@ -41,5 +41,5 @@ _To be filled in as the project develops._
 ```bash
 # pnpm i
 # keyring sync     # populate Keychain from 1Password (pulse/* items)
-# bin/dev          # runs `pnpm vp dev` with secrets injected per-process
+# pnpm dev         # web dev server, FASTMAIL_API_TOKEN injected per-process
 ```
