@@ -12,6 +12,7 @@ export {
 export type { Db } from "./db";
 export {
   deleteEmailsByIds,
+  getEmailIdsSince,
   getSyncCursor,
   latestSyncRun,
   latestSyncRunAttempt,

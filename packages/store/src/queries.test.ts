@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { StoreDbTest, tryDb } from "./db";
 import {
   deleteEmailsByIds,
+  getEmailIdsSince,
   getSyncCursor,
   latestSyncRun,
   latestSyncRunAttempt,
@@ -195,6 +196,31 @@ describe("deleteEmailsByIds", () => {
     });
     const result = await run(program.pipe(Effect.provide(layer)));
     expect(result.map((t) => t.threadId)).toEqual(["T-2"]);
+  });
+});
+
+describe("getEmailIdsSince", () => {
+  it("returns ids of rows received on or after the given date, omitting older rows", async () => {
+    const layer = testLayer();
+    const program = Effect.gen(function* () {
+      yield* upsertEmails([
+        sampleEmail({ id: "M-old", receivedAt: new Date("2026-04-01T00:00:00Z") }),
+        sampleEmail({ id: "M-edge", receivedAt: new Date("2026-04-15T00:00:00Z") }),
+        sampleEmail({ id: "M-new", receivedAt: new Date("2026-05-14T00:00:00Z") }),
+      ]);
+      return yield* getEmailIdsSince(new Date("2026-04-15T00:00:00Z"));
+    });
+    const result = await run(program.pipe(Effect.provide(layer)));
+    // gte: the boundary row is included.
+    expect([...result].sort()).toEqual(["M-edge", "M-new"]);
+  });
+
+  it("returns an empty array when no rows match the window", async () => {
+    const layer = testLayer();
+    const result = await run(
+      getEmailIdsSince(new Date("2099-01-01T00:00:00Z")).pipe(Effect.provide(layer)),
+    );
+    expect(result).toEqual([]);
   });
 });
 

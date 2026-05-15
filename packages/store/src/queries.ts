@@ -1,5 +1,5 @@
 import type { EmailRow, StoreError, SyncCursor, SyncRun } from "@cerebro/core";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { StoreDb, tryDb } from "./db";
@@ -110,6 +110,24 @@ export const upsertEmails = (
         },
       })
       .run();
+  });
+
+/**
+ * IDs of every email with `received_at >= after`. Drives the Catchup
+ * strategy's ID-diff: compare the set the Store currently holds against
+ * the set the upstream Email/query returns in the same window, then
+ * fetch the upstream-only IDs and delete the local-only IDs.
+ */
+export const getEmailIdsSince = (
+  after: Date,
+): Effect.Effect<ReadonlyArray<string>, StoreError, StoreDb> =>
+  tryDb("getEmailIdsSince", (db) => {
+    const rows = db
+      .select({ id: emails.id })
+      .from(emails)
+      .where(gte(emails.receivedAt, after))
+      .all();
+    return rows.map((r) => r.id);
   });
 
 /** Hard-delete rows by JMAP id. Used by Incremental destroyed-set and Catchup reconciliation. */
