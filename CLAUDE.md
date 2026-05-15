@@ -104,14 +104,12 @@ two disagree, CONTEXT.md is the more recent source — update this glossary.
   NOT Mastra. NOT LangChain. NOT OpenClaw as a foundation.**
 - **Data integration:** official **MCP TypeScript SDK** as a client, with
   typed Effect wrappers in `packages/mcp`.
-- **Secrets:** macOS **Keychain** via `keyring exec` (entry point: the
+- **Secrets:** macOS **Keychain** via `kr exec` (entry point: the
   `pnpm dev` script and `bin/sync-fastmail`), populated from 1Password by
-  `keyring sync`.
-  Always write the canonical form `keyring sync` in docs and scripts —
-  the `ks` shorthand is an interactive-zsh alias and won't be present
-  in non-interactive shells, scripts, or fresh sessions. Items live in
-  1Password under titles like `pulse/ANTHROPIC_API_KEY`, tag
-  `keychain-sync`. Never plain `.env`
+  `kr sync`. The repo-root `.keyring` file pins the project namespace
+  (`pulse`), so `kr exec -- CMD` injects every `pulse/*` secret into the
+  child process without naming them. Items live in 1Password under titles
+  like `pulse/ANTHROPIC_API_KEY`, tag `keychain-sync`. Never plain `.env`
   files committed; `.env.example` is the only env file in git. **Don't
   use `op run` here** — it's slow and exports secrets into the shell
   env where coding agents would see them.

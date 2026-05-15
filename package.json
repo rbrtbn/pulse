@@ -5,7 +5,7 @@
   "scripts": {
     "check": "vp check",
     "test": "vp test",
-    "dev": "keyring exec FASTMAIL_API_TOKEN -- vp run web#dev",
+    "dev": "kr exec -- vp run web#dev",
     "build": "vp run -r build",
     "sync:fastmail": "vp run connector-fastmail#sync"
   },
