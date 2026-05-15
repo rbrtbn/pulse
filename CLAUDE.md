@@ -316,6 +316,10 @@ or whenever you sense the thread is lost — including unprompted.
 
 ## Milestone 1 — vertical slice
 
+**Current milestone:** not hard-coded here — the `current-milestone`
+session-start hook (`.claude/hooks/current-milestone.sh`) derives it from
+the open `PRD:` issue and injects a status line into context each session.
+
 **Goal:** prove the pipeline end-to-end with one Source. Add more Sources,
 the Reporter, the Chat, and the Desktop App only after this works and Rob
 has reviewed.
