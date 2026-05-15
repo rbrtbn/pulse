@@ -1,9 +1,11 @@
 import type { Run } from "@pulse/core";
 import type { UnreadThread } from "@pulse/database";
-import { Badge } from "@pulse/ui-shadcn";
-import { createFileRoute } from "@tanstack/react-router";
+import { Badge, Button, Spinner } from "@pulse/ui-shadcn";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { formatHybrid, formatTooltip } from "../lib/time-format";
+import { syncNow } from "../server/actions";
 import { fetchInbox, type SyncFailure } from "../server/queries";
 
 export const Route = createFileRoute("/inbox")({
@@ -16,9 +18,12 @@ function InboxPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
-      <header className="mb-6 flex items-baseline justify-between">
+      <header className="mb-6 flex items-start justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Inbox</h1>
-        <FreshnessLine latestSuccess={latestSuccess} />
+        <div className="flex flex-col items-end gap-1.5">
+          <SyncButton />
+          <FreshnessLine latestSuccess={latestSuccess} />
+        </div>
       </header>
       {failure !== null ? <FailureBanner failure={failure} /> : null}
       {threads.length === 0 ? (
@@ -29,6 +34,42 @@ function InboxPage() {
     </main>
   );
 }
+
+/**
+ * Triggers a Run via the `syncNow` server function, then invalidates the
+ * route loader so the freshness line, banner, and list re-render. The
+ * spinner stays up until the loader refetch resolves. A Source-side
+ * failure surfaces in the banner after invalidation; only an infra
+ * failure (unreachable Database, missing token) lands in the inline error.
+ */
+const SyncButton = () => {
+  const router = useRouter();
+  const [syncing, setSyncing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleClick = () => {
+    setSyncing(true);
+    setError(null);
+    void syncNow()
+      .then(() => router.invalidate())
+      .catch((cause: unknown) => {
+        setError(cause instanceof Error ? cause.message : "Sync failed");
+      })
+      .finally(() => {
+        setSyncing(false);
+      });
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {error !== null ? <span className="text-xs text-red-600">{error}</span> : null}
+      <Button variant="outline" onClick={handleClick} disabled={syncing}>
+        {syncing ? <Spinner /> : null}
+        {syncing ? "Syncing…" : "Sync now"}
+      </Button>
+    </div>
+  );
+};
 
 /**
  * Calm-by-default sync health: renders nothing unless the latest Run
