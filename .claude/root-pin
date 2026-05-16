@@ -1,0 +1,14 @@
+# root-pin — opt this repo into the global root-main hooks.
+#
+# Presence of this file (tracked, in the root checkout) arms two global
+# Claude Code hooks deployed from ~/.claude/:
+#
+#   guard-root-branch.sh — denies `git switch` / `git checkout <branch>`
+#                          in the root checkout (the first `git worktree
+#                          list` entry); linked worktrees are unaffected.
+#   sync-root-main.sh    — fast-forwards the root's `main` at session
+#                          start and after a `gh pr merge`.
+#
+# The file's contents are not parsed — only its presence matters.
+# Hook source lives in the dotfiles repo (dot_claude/). See CLAUDE.md,
+# "Branching & worktrees".

@@ -189,8 +189,8 @@ pulse/
 ### Branching & worktrees
 
 - The **root checkout** (first entry of `git worktree list`) stays on
-  `main` — always. A `PreToolUse` hook denies `git switch` / `git checkout`
-  of any other branch there.
+  `main` — always. A `PreToolUse` hook (`~/.claude/guard-root-branch.sh`)
+  denies `git switch` / `git checkout` of any other branch there.
 - Do all work in a **worktree**, branched explicitly from latest main:
 
   ```
@@ -204,9 +204,12 @@ pulse/
 - Branch name: `<issue-number>-<kebab-slug>`. Example: `12-add-run-table`.
 - **Never push to `main` directly.** Branch protection rejects it server-side.
 - The root's `main` is fast-forwarded automatically at session start and
-  after `gh pr merge` (the `sync-root-main.sh` hook). If a hook reports the
-  root is *not* on main, move the stray branch into its own worktree, then
-  `git -C <root> checkout main`.
+  after `gh pr merge` (the `~/.claude/sync-root-main.sh` hook). If a hook
+  reports the root is *not* on main, move the stray branch into its own
+  worktree, then `git -C <root> checkout main`.
+- Both hooks are **global** — installed in `~/.claude/` from the dotfiles
+  repo, and armed for any repo carrying a tracked `.claude/root-pin` marker
+  (this repo has one). Editing the hook logic happens in dotfiles, not here.
 
 ### Commits
 
