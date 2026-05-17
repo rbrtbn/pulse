@@ -323,8 +323,8 @@ workflow rule. The stops are intentional review gates.
 The `mattpocock/skills` engineering skills are installed **globally** (via the
 `skills` CLI), not vendored per-project: `tdd`, `to-prd`, `to-issues`,
 `grill-me`, `grill-with-docs` (was `domain-model`), `ubiquitous-language`,
-`improve-codebase-architecture`, `request-refactor-plan`, `triage` (was
-`triage-issue`), `design-an-interface`, `zoom-out`.
+`improve-codebase-architecture`, `request-refactor-plan`, `triage`,
+`design-an-interface`, `zoom-out`.
 
 Don't invent processes when a skill covers it. Use `zoom-out` whenever stuck
 or whenever you sense the thread is lost — including unprompted.
