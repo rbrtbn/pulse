@@ -1,0 +1,16 @@
+# worktrunk config for pulse — applies to every wt-managed worktree.
+# https://worktrunk.dev — install: brew install worktrunk; init: wt config shell init zsh
+
+[hooks]
+# After creating a new worktree, set up its workspace.
+# pnpm install handles the absolute-path symlinks in .pnpm/.
+# direnv allow re-allowlists the .envrc at the new path.
+post_create = [
+  "pnpm install",
+  "direnv allow",
+]
+
+[ports]
+# When multiple worktrees run `pnpm dev` in parallel, each gets a unique
+# PORT. The Next.js dev server reads $PORT. First worktree → 3000, next → 3001, etc.
+PORT = { base = 3000 }
